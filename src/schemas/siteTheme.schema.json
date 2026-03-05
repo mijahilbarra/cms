@@ -1,0 +1,103 @@
+{
+  "base": {
+    "label": "Paleta base",
+    "description": "Colores principales del sistema.",
+    "fields": {
+      "primario": {
+        "label": "Color primario",
+        "type": "color",
+        "value": "#0E6E5D"
+      },
+      "secundario": {
+        "label": "Color secundario",
+        "type": "color",
+        "value": "#C17A35"
+      },
+      "terciario": {
+        "label": "Color terciario",
+        "type": "color",
+        "value": "#D8E6DF"
+      },
+      "claro1": {
+        "label": "Claro 1",
+        "type": "color",
+        "value": "#F3F2EC"
+      },
+      "claro2": {
+        "label": "Claro 2",
+        "type": "color",
+        "value": "#FFFDFC"
+      },
+      "oscuro1": {
+        "label": "Oscuro 1",
+        "type": "color",
+        "value": "#1F2A2E"
+      },
+      "oscuro2": {
+        "label": "Oscuro 2",
+        "type": "color",
+        "value": "#4E5B61"
+      }
+    }
+  },
+  "aplicacion": {
+    "label": "Asignación de paleta",
+    "description": "Cada campo usa el nombre de un color base: primario, secundario, terciario, claro1, claro2, oscuro1, oscuro2.",
+    "fields": {
+      "backgroundToken": {
+        "label": "Fondo general",
+        "type": "select",
+        "value": "claro1",
+        "options": ["primario", "secundario", "terciario", "claro1", "claro2", "oscuro1", "oscuro2"]
+      },
+      "surfaceToken": {
+        "label": "Superficies",
+        "type": "select",
+        "value": "claro2",
+        "options": ["primario", "secundario", "terciario", "claro1", "claro2", "oscuro1", "oscuro2"]
+      },
+      "borderToken": {
+        "label": "Bordes",
+        "type": "select",
+        "value": "terciario",
+        "options": ["primario", "secundario", "terciario", "claro1", "claro2", "oscuro1", "oscuro2"]
+      },
+      "textToken": {
+        "label": "Texto principal",
+        "type": "select",
+        "value": "oscuro1",
+        "options": ["primario", "secundario", "terciario", "claro1", "claro2", "oscuro1", "oscuro2"]
+      },
+      "mutedTextToken": {
+        "label": "Texto secundario",
+        "type": "select",
+        "value": "oscuro2",
+        "options": ["primario", "secundario", "terciario", "claro1", "claro2", "oscuro1", "oscuro2"]
+      },
+      "primaryToken": {
+        "label": "Botón principal",
+        "type": "select",
+        "value": "primario",
+        "options": ["primario", "secundario", "terciario", "claro1", "claro2", "oscuro1", "oscuro2"]
+      },
+      "primaryTextToken": {
+        "label": "Texto botón principal",
+        "type": "select",
+        "value": "claro2",
+        "options": ["primario", "secundario", "terciario", "claro1", "claro2", "oscuro1", "oscuro2"]
+      },
+      "accentToken": {
+        "label": "Acento / links",
+        "type": "select",
+        "value": "secundario",
+        "options": ["primario", "secundario", "terciario", "claro1", "claro2", "oscuro1", "oscuro2"]
+      },
+      "heroBackgroundToken": {
+        "label": "Fondo hero",
+        "type": "select",
+        "value": "claro2",
+        "options": ["primario", "secundario", "terciario", "claro1", "claro2", "oscuro1", "oscuro2"]
+      }
+    }
+  }
+}

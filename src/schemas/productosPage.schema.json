@@ -1,0 +1,49 @@
+{
+  "encabezado": {
+    "label": "Encabezado de tratamiento",
+    "description": "Título y descripción principal.",
+    "fields": {
+      "titulo": {
+        "label": "Título",
+        "type": "text",
+        "value": "Opciones de tratamiento para PIF"
+      },
+      "descripcion": {
+        "label": "Descripción",
+        "type": "textarea",
+        "value": "Información orientativa para conversar con tu veterinario. En la práctica clínica se usan presentaciones inyectables (vial) y orales (pastillas), según cada caso."
+      }
+    }
+  },
+  "catalogo": {
+    "label": "Catálogo de medicamentos",
+    "description": "Listado editable de presentaciones.",
+    "fields": {
+      "medicamentos": {
+        "label": "Medicamentos",
+        "type": "json",
+        "value": "[{\"imagen\":\"https://images.unsplash.com/photo-1587854692152-cbe660dbde88?auto=format&fit=crop&w=1200&q=80\",\"nombre\":\"Vial inyectable (GS-441524)\",\"descripcion\":\"Suele utilizarse como opción inicial cuando se requiere control estrecho de absorción y respuesta clínica. Debe administrarse bajo indicación veterinaria.\"},{\"imagen\":\"https://images.unsplash.com/photo-1550572017-edd951aa9f7a?auto=format&fit=crop&w=1200&q=80\",\"nombre\":\"Pastillas orales (GS-441524)\",\"descripcion\":\"Alternativa oral usada en muchos protocolos actuales. Puede facilitar la adherencia en casa, siempre con seguimiento veterinario y controles periódicos.\"}]",
+        "repeater": {
+          "itemLabel": "Medicamento",
+          "fields": [
+            {
+              "key": "imagen",
+              "label": "Imagen (URL)",
+              "type": "url"
+            },
+            {
+              "key": "nombre",
+              "label": "Nombre",
+              "type": "text"
+            },
+            {
+              "key": "descripcion",
+              "label": "Descripción",
+              "type": "textarea"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

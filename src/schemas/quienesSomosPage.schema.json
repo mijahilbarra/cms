@@ -1,0 +1,107 @@
+{
+  "encabezado": {
+    "label": "Encabezado",
+    "description": "Presentación de la empresa.",
+    "fields": {
+      "titulo": {
+        "label": "Título",
+        "type": "text",
+        "value": "Quiénes somos"
+      },
+      "descripcion": {
+        "label": "Descripción",
+        "type": "textarea",
+        "value": "Somos una inmobiliaria especializada en venta residencial y de inversión. Unimos análisis comercial, soporte legal y representación cercana para que cada cliente opere con seguridad."
+      }
+    }
+  },
+  "trayectoria": {
+    "label": "Trayectoria",
+    "description": "Resumen de experiencia de la firma.",
+    "fields": {
+      "titulo": {
+        "label": "Título",
+        "type": "text",
+        "value": "Experiencia que se traduce en resultados"
+      },
+      "descripcion": {
+        "label": "Descripción",
+        "type": "textarea",
+        "value": "Desde 2012 acompañamos operaciones inmobiliarias en zonas urbanas y suburbanas, con foco en transparencia documental y rentabilidad sostenible."
+      },
+      "aniosExperiencia": {
+        "label": "Años de experiencia",
+        "type": "text",
+        "value": "14"
+      }
+    }
+  },
+  "valores": {
+    "label": "Valores",
+    "description": "Pilares de trabajo.",
+    "fields": {
+      "items": {
+        "label": "Valores",
+        "type": "json",
+        "value": "[{\"titulo\":\"Transparencia\",\"descripcion\":\"Cada propiedad se publica con información verificable y documentación revisada.\"},{\"titulo\":\"Acompañamiento\",\"descripcion\":\"Guiamos al cliente en cada etapa: búsqueda, negociación y firma.\"},{\"titulo\":\"Visión de inversión\",\"descripcion\":\"Analizamos potencial de renta, valorización y riesgos antes de recomendar.\"}]",
+        "repeater": {
+          "itemLabel": "Valor",
+          "fields": [
+            {
+              "key": "titulo",
+              "label": "Título",
+              "type": "text"
+            },
+            {
+              "key": "descripcion",
+              "label": "Descripción",
+              "type": "textarea"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "equipo": {
+    "label": "Equipo",
+    "description": "Texto descriptivo del equipo.",
+    "fields": {
+      "titulo": {
+        "label": "Título",
+        "type": "text",
+        "value": "Un equipo comercial y legal trabajando en conjunto"
+      },
+      "descripcion": {
+        "label": "Descripción",
+        "type": "textarea",
+        "value": "Representantes comerciales, asesores hipotecarios y especialistas legales coordinan cada operación para reducir fricciones y tiempos de cierre."
+      }
+    }
+  },
+  "cta": {
+    "label": "Llamado a la acción",
+    "description": "Bloque final de contacto.",
+    "fields": {
+      "titulo": {
+        "label": "Título",
+        "type": "text",
+        "value": "¿Listo para encontrar tu próximo inmueble?"
+      },
+      "descripcion": {
+        "label": "Descripción",
+        "type": "textarea",
+        "value": "Cuéntanos qué estás buscando y te proponemos opciones acordes a tu objetivo y presupuesto."
+      },
+      "botonTexto": {
+        "label": "Texto botón",
+        "type": "text",
+        "value": "Ver inmuebles"
+      },
+      "botonUrl": {
+        "label": "URL botón",
+        "type": "url",
+        "value": "/"
+      }
+    }
+  }
+}

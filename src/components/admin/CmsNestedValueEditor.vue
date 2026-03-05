@@ -1,0 +1,305 @@
+<script setup lang="ts">
+import { computed } from "vue";
+import type { CmsFieldSchema, CmsNestedFieldSchema } from "../../types/contentSchema";
+
+defineOptions({ name: "CmsNestedValueEditor" });
+
+type SchemaNode = CmsNestedFieldSchema & Partial<Pick<CmsFieldSchema, "key" | "label">>;
+
+const props = withDefaults(
+  defineProps<{
+    schema: SchemaNode;
+    modelValue: unknown;
+    disabled?: boolean;
+  }>(),
+  {
+    disabled: false
+  }
+);
+
+const emit = defineEmits<{
+  (event: "update:modelValue", value: unknown): void;
+}>();
+
+const mapFields = computed<CmsFieldSchema[]>(() =>
+  Array.isArray(props.schema.mapFields) ? props.schema.mapFields : []
+);
+
+const arrayItemSchema = computed<CmsNestedFieldSchema>(() => {
+  if (props.schema.itemSchema && typeof props.schema.itemSchema === "object") {
+    return props.schema.itemSchema;
+  }
+  return { type: "text" };
+});
+
+const mapValue = computed<Record<string, unknown>>(() => toRecord(props.modelValue));
+const arrayValue = computed<unknown[]>(() => (Array.isArray(props.modelValue) ? props.modelValue : []));
+const dynamicMapEntries = computed(() => Object.entries(mapValue.value));
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+}
+
+function defaultValueForSchema(schema: CmsNestedFieldSchema): unknown {
+  if (schema.type === "array") {
+    return [];
+  }
+  if (schema.type === "map") {
+    return {};
+  }
+  if (schema.type === "boolean") {
+    return false;
+  }
+  return "";
+}
+
+function updateMapField(key: string, value: unknown): void {
+  emit("update:modelValue", {
+    ...mapValue.value,
+    [key]: value
+  });
+}
+
+function addArrayItem(): void {
+  emit("update:modelValue", [...arrayValue.value, defaultValueForSchema(arrayItemSchema.value)]);
+}
+
+function removeArrayItem(index: number): void {
+  const next = [...arrayValue.value];
+  next.splice(index, 1);
+  emit("update:modelValue", next);
+}
+
+function updateArrayItem(index: number, value: unknown): void {
+  const next = [...arrayValue.value];
+  next[index] = value;
+  emit("update:modelValue", next);
+}
+
+function onPrimitiveInput(value: string): void {
+  emit("update:modelValue", value);
+}
+
+function onBooleanInput(value: boolean): void {
+  emit("update:modelValue", value);
+}
+
+function addMapEntry(): void {
+  const current = mapValue.value;
+  let index = 1;
+  let candidate = `campo_${index}`;
+  while (candidate in current) {
+    index += 1;
+    candidate = `campo_${index}`;
+  }
+
+  emit("update:modelValue", {
+    ...current,
+    [candidate]: ""
+  });
+}
+
+function removeMapEntry(key: string): void {
+  const next = { ...mapValue.value };
+  delete next[key];
+  emit("update:modelValue", next);
+}
+
+function renameMapEntry(oldKey: string, nextKeyRaw: string): void {
+  const nextKey = nextKeyRaw.trim();
+  if (!nextKey || nextKey === oldKey) {
+    return;
+  }
+
+  const next = { ...mapValue.value };
+  const value = next[oldKey];
+  delete next[oldKey];
+  next[nextKey] = value;
+  emit("update:modelValue", next);
+}
+
+function updateDynamicMapValue(key: string, raw: string): void {
+  const next = { ...mapValue.value };
+  next[key] = parseDynamicInput(raw);
+  emit("update:modelValue", next);
+}
+
+function stringifyDynamicValue(value: unknown): string {
+  if (typeof value === "string") {
+    return value;
+  }
+  if (value === undefined || value === null) {
+    return "";
+  }
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
+function parseDynamicInput(raw: string): unknown {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  if ((trimmed.startsWith("{") && trimmed.endsWith("}")) || (trimmed.startsWith("[") && trimmed.endsWith("]"))) {
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      return raw;
+    }
+  }
+
+  return raw;
+}
+</script>
+
+<template>
+  <div class="space-y-2">
+    <section
+      v-if="schema.type === 'map'"
+      class="space-y-3 rounded-md border border-slate-200 bg-slate-50 p-3"
+    >
+      <article
+        v-for="field in mapFields"
+        :key="field.key"
+        class="space-y-1 rounded-md border border-slate-200 bg-white p-3"
+      >
+        <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500">{{ field.label }}</label>
+        <p v-if="field.helpText" class="text-xs text-slate-500">{{ field.helpText }}</p>
+        <CmsNestedValueEditor
+          :schema="field"
+          :model-value="mapValue[field.key]"
+          :disabled="disabled"
+          @update:model-value="updateMapField(field.key, $event)"
+        />
+      </article>
+      <div v-if="!mapFields.length" class="space-y-2">
+        <article
+          v-for="[entryKey, entryValue] in dynamicMapEntries"
+          :key="entryKey"
+          class="grid gap-2 rounded-md border border-slate-200 bg-white p-3 md:grid-cols-[180px,1fr,auto]"
+        >
+          <input
+            :value="entryKey"
+            type="text"
+            class="rounded-md border border-slate-300 px-2 py-1 text-xs outline-none focus:border-slate-500 disabled:bg-slate-100"
+            :disabled="disabled"
+            @change="renameMapEntry(entryKey, ($event.target as HTMLInputElement).value)"
+          />
+          <input
+            :value="stringifyDynamicValue(entryValue)"
+            type="text"
+            class="rounded-md border border-slate-300 px-2 py-1 text-xs outline-none focus:border-slate-500 disabled:bg-slate-100"
+            :disabled="disabled"
+            @input="updateDynamicMapValue(entryKey, ($event.target as HTMLInputElement).value)"
+          />
+          <button
+            type="button"
+            class="rounded-md border border-rose-300 px-2 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-50"
+            :disabled="disabled"
+            @click="removeMapEntry(entryKey)"
+          >
+            Quitar
+          </button>
+        </article>
+
+        <button
+          type="button"
+          class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-white disabled:opacity-60"
+          :disabled="disabled"
+          @click="addMapEntry"
+        >
+          Agregar propiedad
+        </button>
+        <p class="text-xs text-slate-500">
+          Puedes escribir JSON en el valor para guardar objetos o arreglos.
+        </p>
+      </div>
+    </section>
+
+    <section
+      v-else-if="schema.type === 'array'"
+      class="space-y-3 rounded-md border border-slate-200 bg-slate-50 p-3"
+    >
+      <article
+        v-for="(item, index) in arrayValue"
+        :key="index"
+        class="space-y-2 rounded-md border border-slate-200 bg-white p-3"
+      >
+        <div class="flex items-center justify-between">
+          <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Item {{ index + 1 }}</p>
+          <button
+            type="button"
+            class="rounded-md border border-rose-300 px-2 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-50"
+            :disabled="disabled"
+            @click="removeArrayItem(index)"
+          >
+            Quitar
+          </button>
+        </div>
+        <CmsNestedValueEditor
+          :schema="arrayItemSchema"
+          :model-value="item"
+          :disabled="disabled"
+          @update:model-value="updateArrayItem(index, $event)"
+        />
+      </article>
+
+      <button
+        type="button"
+        class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-white disabled:opacity-60"
+        :disabled="disabled"
+        @click="addArrayItem"
+      >
+        Agregar item
+      </button>
+    </section>
+
+    <label
+      v-else-if="schema.type === 'boolean'"
+      class="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-700"
+    >
+      <input
+        type="checkbox"
+        :checked="Boolean(modelValue)"
+        :disabled="disabled"
+        @change="onBooleanInput(($event.target as HTMLInputElement).checked)"
+      />
+      Activo
+    </label>
+
+    <textarea
+      v-else-if="schema.type === 'textarea' || schema.type === 'richtext'"
+      :value="typeof modelValue === 'string' ? modelValue : ''"
+      rows="4"
+      :placeholder="schema.placeholder || ''"
+      :disabled="disabled"
+      class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500 disabled:bg-slate-100"
+      @input="onPrimitiveInput(($event.target as HTMLTextAreaElement).value)"
+    ></textarea>
+
+    <select
+      v-else-if="schema.type === 'select'"
+      :value="typeof modelValue === 'string' ? modelValue : ''"
+      :disabled="disabled"
+      class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500 disabled:bg-slate-100"
+      @change="onPrimitiveInput(($event.target as HTMLSelectElement).value)"
+    >
+      <option value="">Selecciona una opción</option>
+      <option v-for="option in schema.options || []" :key="option" :value="option">{{ option }}</option>
+    </select>
+
+    <input
+      v-else
+      :value="typeof modelValue === 'string' ? modelValue : ''"
+      type="text"
+      :placeholder="schema.placeholder || ''"
+      :disabled="disabled"
+      class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500 disabled:bg-slate-100"
+      @input="onPrimitiveInput(($event.target as HTMLInputElement).value)"
+    />
+  </div>
+</template>

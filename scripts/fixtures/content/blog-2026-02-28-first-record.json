@@ -1,0 +1,7 @@
+{
+  "titulo": "Primer registro CMS dinámico: Blog",
+  "resumen": "Registro semilla generado desde schema dinámico (document) para la colección blogs.",
+  "imagenPrincipalUrl": "",
+  "contenidoHtml": "<h2>Primer contenido</h2><p>Este artículo fue creado usando el schema dinámico del CMS.</p>",
+  "publicado": true
+}

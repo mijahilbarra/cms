@@ -1,0 +1,43 @@
+{
+  "name": "@elmuki/pif-warriors-cms",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/pif-warriors-cms.js",
+  "module": "./dist/pif-warriors-cms.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/pif-warriors-cms.js"
+    },
+    "./styles.css": "./dist/pif-warriors-cms.css"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "npm run type-check && vite build && cp src/public-types.d.ts dist/index.d.ts",
+    "type-check": "vue-tsc --noEmit",
+    "seed:content": "node scripts/seed-content-from-schema.mjs",
+    "migrate:views-dictionary": "node scripts/migrate-views-dictionary-structure.mjs",
+    "migrate:complex-string-fields": "node scripts/migrate-stringified-complex-fields.mjs",
+    "prepare": "npm run build"
+  },
+  "peerDependencies": {
+    "firebase": "^12.0.0",
+    "vue": "^3.5.0",
+    "vue-router": "^4.0.0"
+  },
+  "dependencies": {
+    "quill": "^2.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "@vitejs/plugin-vue": "^6.0.1",
+    "firebase-admin": "^13.6.1",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.3",
+    "vue-tsc": "^3.1.0"
+  }
+}

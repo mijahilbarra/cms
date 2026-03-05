@@ -1,0 +1,49 @@
+{
+  "encabezado": {
+    "label": "Encabezado agradecimientos",
+    "description": "Mensaje principal de reconocimiento.",
+    "fields": {
+      "titulo": {
+        "label": "Título",
+        "type": "text",
+        "value": "Gracias a quienes sostienen la investigacion y el acompanamiento"
+      },
+      "descripcion": {
+        "label": "Descripción",
+        "type": "textarea",
+        "value": "Reconocemos a investigadores, fundaciones, veterinarios y familias que hicieron posible que hoy existan mas opciones y mejor informacion para enfrentar la PIF."
+      }
+    }
+  },
+  "lista": {
+    "label": "Listado de reconocimientos",
+    "description": "Agradecimientos mostrados en la sección pública.",
+    "fields": {
+      "items": {
+        "label": "Items",
+        "type": "json",
+        "value": "[{\"nombre\":\"Dr. Niels Pedersen\",\"imagen\":\"https://firebasestorage.googleapis.com/v0/b/pifwarriorslatam.firebasestorage.app/o/web%2Fdr-niels-pedersen.jpg?alt=media\",\"descripcion\":\"Investigador y profesor emerito de UC Davis. Sus estudios sobre GC376 y GS-441524 cambiaron el panorama de la PIF y abrieron protocolos terapeuticos con evidencia clinica.\"},{\"nombre\":\"SOCK FIP Foundation\",\"imagen\":\"\",\"descripcion\":\"Organizacion sin fines de lucro enfocada en eliminar la PIF mediante educacion, acompanamiento y financiamiento para investigacion en UC Davis-CCAH. Su red de donantes y familias acelero avances concretos.\"},{\"nombre\":\"Centro para la Salud de Animales de Compania (CCAH, UC Davis)\",\"imagen\":\"\",\"descripcion\":\"Equipo academico y clinico que ha sostenido investigacion traslacional sobre diagnostico, patogenia y tratamiento de PIF, conectando laboratorio y practica veterinaria.\"},{\"nombre\":\"Veterinarios y familias de la comunidad\",\"imagen\":\"\",\"descripcion\":\"Veterinarios, cuidadores y rescatistas que compartieron datos, seguimiento y experiencias reales. Su participacion fue clave para convertir la evidencia en decisiones clinicas mas seguras.\"}]",
+        "repeater": {
+          "itemLabel": "Agradecimiento",
+          "fields": [
+            {
+              "key": "nombre",
+              "label": "Nombre",
+              "type": "text"
+            },
+            {
+              "key": "imagen",
+              "label": "Imagen (URL)",
+              "type": "url"
+            },
+            {
+              "key": "descripcion",
+              "label": "Descripción",
+              "type": "textarea"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

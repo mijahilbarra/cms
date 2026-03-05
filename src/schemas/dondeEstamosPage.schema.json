@@ -1,0 +1,70 @@
+{
+  "encabezado": {
+    "label": "Encabezado de ubicaciones",
+    "description": "Texto principal de la página.",
+    "fields": {
+      "titulo": {
+        "label": "Título",
+        "type": "text",
+        "value": "Dónde estamos en Latino América"
+      },
+      "descripcion": {
+        "label": "Descripción",
+        "type": "textarea",
+        "value": "Datos de ejemplo para la red de acompañamiento. Podemos ajustar ciudad por ciudad según tu operación real."
+      }
+    }
+  },
+  "distribucion": {
+    "label": "Puntos de distribución",
+    "description": "Lugares con datos de atención.",
+    "fields": {
+      "lugares": {
+        "label": "Lugares",
+        "type": "json",
+        "value": "[{\"pais\":\"Argentina\",\"contacto\":\"Coordinación Argentina\",\"direccion\":\"Av. Corrientes 1520, Buenos Aires (dato de prueba)\",\"telefono\":\"+54 11 4000 1001\",\"correo\":\"argentina@pifwarriorslatam.org\",\"horarioAtencion\":\"Lunes a viernes, 09:00 a 18:00\"},{\"pais\":\"Bolivia\",\"contacto\":\"Coordinación Bolivia\",\"direccion\":\"Av. 6 de Agosto 2410, La Paz (dato de prueba)\",\"telefono\":\"+591 2 211 1002\",\"correo\":\"bolivia@pifwarriorslatam.org\",\"horarioAtencion\":\"Lunes a viernes, 09:00 a 17:00\"},{\"pais\":\"Chile\",\"contacto\":\"Coordinación Chile\",\"direccion\":\"Av. Providencia 1845, Santiago (dato de prueba)\",\"telefono\":\"+56 2 2400 1003\",\"correo\":\"chile@pifwarriorslatam.org\",\"horarioAtencion\":\"Lunes a viernes, 09:00 a 18:00\"},{\"pais\":\"Colombia\",\"contacto\":\"Coordinación Colombia\",\"direccion\":\"Carrera 7 #71-21, Bogotá (dato de prueba)\",\"telefono\":\"+57 601 500 1004\",\"correo\":\"colombia@pifwarriorslatam.org\",\"horarioAtencion\":\"Lunes a sábado, 08:00 a 17:00\"},{\"pais\":\"Ecuador\",\"contacto\":\"Coordinación Ecuador\",\"direccion\":\"Av. República de El Salvador N34-229, Quito (dato de prueba)\",\"telefono\":\"+593 2 382 1005\",\"correo\":\"ecuador@pifwarriorslatam.org\",\"horarioAtencion\":\"Lunes a viernes, 09:00 a 18:00\"},{\"pais\":\"Perú\",\"contacto\":\"Coordinación Perú\",\"direccion\":\"Av. Javier Prado Este 560, Lima (dato de prueba)\",\"telefono\":\"+51 1 640 1006\",\"correo\":\"peru@pifwarriorslatam.org\",\"horarioAtencion\":\"Lunes a viernes, 09:00 a 18:00\"}]",
+        "repeater": {
+          "itemLabel": "Lugar",
+          "fields": [
+            {
+              "key": "pais",
+              "label": "País",
+              "type": "text"
+            },
+            {
+              "key": "imagenUrl",
+              "label": "Imagen (URL)",
+              "type": "url",
+              "placeholder": "https://..."
+            },
+            {
+              "key": "contacto",
+              "label": "Contacto",
+              "type": "text"
+            },
+            {
+              "key": "direccion",
+              "label": "Dirección",
+              "type": "textarea"
+            },
+            {
+              "key": "telefono",
+              "label": "Teléfono",
+              "type": "text"
+            },
+            {
+              "key": "correo",
+              "label": "Correo electrónico",
+              "type": "text"
+            },
+            {
+              "key": "horarioAtencion",
+              "label": "Horario de atención",
+              "type": "text"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

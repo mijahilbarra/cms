@@ -1,0 +1,213 @@
+{
+  "hero": {
+    "label": "Hero principal",
+    "description": "Mensaje principal de la landing inmobiliaria.",
+    "fields": {
+      "badge": {
+        "label": "Etiqueta superior",
+        "type": "text",
+        "value": "Inmobiliaria Elmuki"
+      },
+      "titulo": {
+        "label": "Título",
+        "type": "text",
+        "value": "Encuentra el inmueble ideal para vivir o invertir"
+      },
+      "subtitulo": {
+        "label": "Subtítulo",
+        "type": "textarea",
+        "value": "Te acompañamos de punta a punta en la compra, venta y tasación de propiedades con asesoría clara y acompañamiento real."
+      },
+      "botonTexto": {
+        "label": "Texto del botón",
+        "type": "text",
+        "value": "Ver inmuebles"
+      },
+      "botonUrl": {
+        "label": "URL del botón",
+        "type": "url",
+        "value": "#inmuebles"
+      },
+      "imagenUrl": {
+        "label": "Imagen hero",
+        "type": "url",
+        "value": "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1400&q=80"
+      }
+    }
+  },
+  "propuesta": {
+    "label": "Propuesta de valor",
+    "description": "Bloque institucional con métricas.",
+    "fields": {
+      "titulo": {
+        "label": "Título",
+        "type": "text",
+        "value": "Compras seguras, procesos ágiles y atención humana"
+      },
+      "descripcion": {
+        "label": "Descripción",
+        "type": "textarea",
+        "value": "Trabajamos con análisis legal, verificación documental y una red de representantes especializados para que tomes decisiones con confianza."
+      },
+      "metricas": {
+        "label": "Métricas",
+        "type": "json",
+        "value": "[{\"label\":\"Operaciones cerradas\",\"valor\":\"+420\"},{\"label\":\"Años de experiencia\",\"valor\":\"14\"},{\"label\":\"Clientes satisfechos\",\"valor\":\"98%\"}]",
+        "repeater": {
+          "itemLabel": "Métrica",
+          "fields": [
+            {
+              "key": "label",
+              "label": "Etiqueta",
+              "type": "text"
+            },
+            {
+              "key": "valor",
+              "label": "Valor",
+              "type": "text"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "inmuebles": {
+    "label": "Sección de inmuebles",
+    "description": "Textos usados sobre el listado dinámico.",
+    "fields": {
+      "titulo": {
+        "label": "Título de sección",
+        "type": "text",
+        "value": "Inmuebles destacados"
+      },
+      "descripcion": {
+        "label": "Descripción",
+        "type": "textarea",
+        "value": "Selecciona una propiedad y contacta directamente con el representante asignado."
+      },
+      "tagPrecio": {
+        "label": "Etiqueta precio",
+        "type": "text",
+        "value": "Precio"
+      },
+      "tagTipo": {
+        "label": "Etiqueta tipo",
+        "type": "text",
+        "value": "Tipo"
+      },
+      "tagAmbientes": {
+        "label": "Etiqueta cuartos",
+        "type": "text",
+        "value": "Cuartos"
+      },
+      "tagBanos": {
+        "label": "Etiqueta baños",
+        "type": "text",
+        "value": "Baños"
+      },
+      "tagCochera": {
+        "label": "Etiqueta cochera",
+        "type": "text",
+        "value": "Cochera"
+      },
+      "sinResultados": {
+        "label": "Texto sin resultados",
+        "type": "textarea",
+        "value": "Todavía no hay inmuebles cargados. Puedes agregarlos desde el CMS en el tipo de contenido Inmuebles."
+      }
+    }
+  },
+  "proceso": {
+    "label": "Proceso de trabajo",
+    "description": "Pasos del servicio inmobiliario.",
+    "fields": {
+      "titulo": {
+        "label": "Título",
+        "type": "text",
+        "value": "Así te acompañamos en cada operación"
+      },
+      "items": {
+        "label": "Pasos",
+        "type": "json",
+        "value": "[{\"paso\":\"01\",\"titulo\":\"Diagnóstico\",\"descripcion\":\"Relevamos tu objetivo, presupuesto y zona de interés.\"},{\"paso\":\"02\",\"titulo\":\"Selección\",\"descripcion\":\"Te mostramos propiedades validadas según tu perfil.\"},{\"paso\":\"03\",\"titulo\":\"Cierre\",\"descripcion\":\"Negociamos, coordinamos documentación y cerramos la operación.\"}]",
+        "repeater": {
+          "itemLabel": "Paso",
+          "fields": [
+            {
+              "key": "paso",
+              "label": "Número",
+              "type": "text"
+            },
+            {
+              "key": "titulo",
+              "label": "Título",
+              "type": "text"
+            },
+            {
+              "key": "descripcion",
+              "label": "Descripción",
+              "type": "textarea"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "faq": {
+    "label": "Preguntas frecuentes",
+    "description": "FAQ para clientes.",
+    "fields": {
+      "titulo": {
+        "label": "Título",
+        "type": "text",
+        "value": "Preguntas frecuentes"
+      },
+      "items": {
+        "label": "FAQs",
+        "type": "json",
+        "value": "[{\"pregunta\":\"¿Puedo visitar una propiedad antes de reservar?\",\"respuesta\":\"Sí. Coordinamos visitas con el representante y te acompañamos durante el recorrido.\"},{\"pregunta\":\"¿Trabajan con propiedades para inversión?\",\"respuesta\":\"Sí. Evaluamos renta potencial, plusvalía y riesgos de cada operación.\"},{\"pregunta\":\"¿También gestionan venta de inmuebles?\",\"respuesta\":\"Sí, hacemos tasación, estrategia comercial y publicación multicanal.\"}]",
+        "repeater": {
+          "itemLabel": "FAQ",
+          "fields": [
+            {
+              "key": "pregunta",
+              "label": "Pregunta",
+              "type": "text"
+            },
+            {
+              "key": "respuesta",
+              "label": "Respuesta",
+              "type": "textarea"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "footer": {
+    "label": "Pie de página",
+    "description": "Texto y acciones internas del footer global.",
+    "fields": {
+      "textoPrincipal": {
+        "label": "Texto principal",
+        "type": "text",
+        "value": "Contenido administrable desde CMS. Equipo interno: inicia sesión para editar vistas y documentos."
+      },
+      "loginLabel": {
+        "label": "Etiqueta botón ingresar",
+        "type": "text",
+        "value": "Iniciar sesión"
+      },
+      "panelLabel": {
+        "label": "Etiqueta botón panel",
+        "type": "text",
+        "value": "Panel"
+      },
+      "salirLabel": {
+        "label": "Etiqueta botón salir",
+        "type": "text",
+        "value": "Salir"
+      }
+    }
+  }
+}

@@ -1,0 +1,480 @@
+<script setup lang="ts">
+import { computed, onMounted, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import CmsSchemaFieldEditor from "../../components/admin/CmsSchemaFieldEditor.vue";
+import {
+  ensureDefaultSchemas,
+  guardarSchemaContenido,
+  listarSchemasContenido
+} from "../../services/contentSchemaService";
+import type { CmsContentSchema, CmsFieldSchema, CmsNestedFieldSchema } from "../../types/contentSchema";
+
+type SchemaDraft = {
+  id: string;
+  title: string;
+  description: string;
+  storageType: CmsContentSchema["storageType"];
+  collectionName: string;
+  dictionaryDocumentId: string;
+  dictionaryRootKey: string;
+  slugFromField: string;
+  previewField: string;
+  fields: CmsFieldSchema[];
+};
+
+const route = useRoute();
+const router = useRouter();
+const schemas = ref<CmsContentSchema[]>([]);
+const selectedSchemaId = ref("");
+const cargando = ref(false);
+const guardandoEdicion = ref(false);
+const schemaDraft = ref<SchemaDraft | null>(null);
+const error = ref("");
+const errorEdicion = ref("");
+const mensajeEdicion = ref("");
+
+const selectedSchema = computed(() => {
+  return schemas.value.find((schema) => schema.id === selectedSchemaId.value) ?? null;
+});
+
+onMounted(() => {
+  void cargarSchemas();
+});
+
+watch(
+  () => route.query.schema,
+  (value) => {
+    if (typeof value !== "string") {
+      return;
+    }
+    if (!schemas.value.some((schema) => schema.id === value)) {
+      return;
+    }
+    if (selectedSchemaId.value !== value) {
+      selectedSchemaId.value = value;
+    }
+  }
+);
+
+watch(
+  selectedSchema,
+  (schema) => {
+    errorEdicion.value = "";
+    mensajeEdicion.value = "";
+    schemaDraft.value = schema ? crearDraftDesdeSchema(schema) : null;
+  },
+  { immediate: true }
+);
+
+async function cargarSchemas(): Promise<void> {
+  cargando.value = true;
+  error.value = "";
+
+  try {
+    let encontrados = await listarSchemasContenido();
+    if (!encontrados.length) {
+      await ensureDefaultSchemas();
+      encontrados = await listarSchemasContenido();
+    }
+
+    schemas.value = encontrados;
+    sincronizarSeleccion(encontrados);
+    if (selectedSchemaId.value) {
+      await actualizarRutaSchema(selectedSchemaId.value);
+    }
+  } catch {
+    error.value = "No se pudieron cargar los esquemas.";
+  } finally {
+    cargando.value = false;
+  }
+}
+
+function sincronizarSeleccion(encontrados: CmsContentSchema[]): void {
+  if (!encontrados.length) {
+    selectedSchemaId.value = "";
+    return;
+  }
+
+  const schemaFromQuery = typeof route.query.schema === "string" ? route.query.schema : "";
+  if (schemaFromQuery && encontrados.some((schema) => schema.id === schemaFromQuery)) {
+    selectedSchemaId.value = schemaFromQuery;
+    return;
+  }
+
+  if (encontrados.some((schema) => schema.id === selectedSchemaId.value)) {
+    return;
+  }
+
+  selectedSchemaId.value = encontrados[0].id;
+}
+
+async function actualizarRutaSchema(schemaId: string): Promise<void> {
+  if (!schemaId || route.query.schema === schemaId) {
+    return;
+  }
+
+  await router.replace({
+    query: {
+      ...route.query,
+      schema: schemaId
+    }
+  });
+}
+
+function crearNodoVacio(): CmsNestedFieldSchema {
+  return {
+    type: "text",
+    required: false,
+    placeholder: "",
+    helpText: "",
+    options: []
+  };
+}
+
+function crearCampoVacio(): CmsFieldSchema {
+  return {
+    ...crearNodoVacio(),
+    key: "",
+    label: ""
+  };
+}
+
+function clonarNodo(node: CmsNestedFieldSchema): CmsNestedFieldSchema {
+  const cloned: CmsNestedFieldSchema = {
+    type: node.type,
+    required: Boolean(node.required),
+    placeholder: node.placeholder ?? "",
+    helpText: node.helpText ?? "",
+    options: Array.isArray(node.options) ? [...node.options] : []
+  };
+
+  if (node.type === "map") {
+    cloned.mapFields = Array.isArray(node.mapFields) ? node.mapFields.map((field) => clonarCampo(field)) : [];
+  }
+
+  if (node.type === "array") {
+    cloned.itemSchema = node.itemSchema ? clonarNodo(node.itemSchema) : crearNodoVacio();
+  }
+
+  return cloned;
+}
+
+function clonarCampo(field: CmsFieldSchema): CmsFieldSchema {
+  const nested = clonarNodo(field);
+  return {
+    ...nested,
+    key: field.key ?? "",
+    label: field.label ?? ""
+  };
+}
+
+function crearDraftDesdeSchema(schema: CmsContentSchema): SchemaDraft {
+  return {
+    id: schema.id,
+    title: schema.title,
+    description: schema.description ?? "",
+    storageType: schema.storageType,
+    collectionName: schema.collectionName,
+    dictionaryDocumentId: schema.dictionaryDocumentId ?? "",
+    dictionaryRootKey: schema.dictionaryRootKey ?? "",
+    slugFromField: schema.slugFromField ?? "",
+    previewField: schema.previewField ?? "",
+    fields: schema.fields.map((field) => clonarCampo(field))
+  };
+}
+
+function updateMetaField(field: keyof Omit<SchemaDraft, "fields">, value: string): void {
+  if (!schemaDraft.value) {
+    return;
+  }
+  schemaDraft.value = {
+    ...schemaDraft.value,
+    [field]: value
+  };
+}
+
+function updateStorageType(value: string): void {
+  if (!schemaDraft.value) {
+    return;
+  }
+  schemaDraft.value.storageType = value === "dictionary" ? "dictionary" : "document";
+}
+
+function agregarCampo(): void {
+  if (!schemaDraft.value) {
+    return;
+  }
+  schemaDraft.value.fields.push(crearCampoVacio());
+}
+
+function actualizarCampo(index: number, value: CmsFieldSchema): void {
+  if (!schemaDraft.value) {
+    return;
+  }
+  schemaDraft.value.fields[index] = clonarCampo(value);
+}
+
+function eliminarCampo(index: number): void {
+  if (!schemaDraft.value) {
+    return;
+  }
+  schemaDraft.value.fields.splice(index, 1);
+}
+
+function validarNodo(node: CmsNestedFieldSchema, contexto: string): void {
+  if (node.type === "map") {
+    const fields = Array.isArray(node.mapFields) ? node.mapFields : [];
+    for (let index = 0; index < fields.length; index += 1) {
+      validarCampo(fields[index], `${contexto}.mapFields[${index}]`);
+    }
+  }
+
+  if (node.type === "array" && node.itemSchema) {
+    validarNodo(node.itemSchema, `${contexto}.itemSchema`);
+  }
+}
+
+function validarCampo(field: CmsFieldSchema, contexto: string): void {
+  if (!field.key.trim() || !field.label.trim()) {
+    throw new Error(`${contexto}: completa key y label.`);
+  }
+  validarNodo(field, contexto);
+}
+
+async function guardarEdicion(): Promise<void> {
+  if (!selectedSchema.value || !schemaDraft.value) {
+    return;
+  }
+
+  guardandoEdicion.value = true;
+  errorEdicion.value = "";
+  mensajeEdicion.value = "";
+
+  try {
+    const draft = schemaDraft.value;
+
+    if (!draft.id.trim() || !draft.title.trim() || !draft.collectionName.trim()) {
+      throw new Error("Completa id, título y colección del esquema.");
+    }
+
+    if (!draft.fields.length) {
+      throw new Error("Agrega al menos un campo al esquema.");
+    }
+
+    const fields = draft.fields.map((field) => clonarCampo(field));
+    for (let index = 0; index < fields.length; index += 1) {
+      validarCampo(fields[index], `fields[${index}]`);
+    }
+
+    const payload: CmsContentSchema = {
+      id: draft.id,
+      title: draft.title,
+      description: draft.description,
+      storageType: draft.storageType,
+      collectionName: draft.collectionName,
+      dictionaryDocumentId: draft.storageType === "dictionary" ? draft.dictionaryDocumentId : "",
+      dictionaryRootKey: draft.storageType === "dictionary" ? draft.dictionaryRootKey : "",
+      slugFromField: draft.slugFromField,
+      previewField: draft.previewField,
+      fields
+    };
+
+    await guardarSchemaContenido(payload);
+    await cargarSchemas();
+    selectedSchemaId.value = payload.id;
+    await actualizarRutaSchema(payload.id);
+    window.dispatchEvent(new Event("cms-schemas-updated"));
+
+    const updated = schemas.value.find((schema) => schema.id === selectedSchemaId.value);
+    schemaDraft.value = updated ? crearDraftDesdeSchema(updated) : crearDraftDesdeSchema(payload);
+    mensajeEdicion.value = "Esquema actualizado.";
+  } catch (reason) {
+    errorEdicion.value = reason instanceof Error ? reason.message : "No se pudo guardar el esquema.";
+  } finally {
+    guardandoEdicion.value = false;
+  }
+}
+</script>
+
+<template>
+  <section class="space-y-4">
+    <article class="rounded-2xl border border-slate-200 bg-white p-5">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 class="text-xl font-black text-slate-900">Esquema editable</h3>
+          <p class="mt-1 text-sm text-slate-600">
+            Edición visual de campos. Los tipos <strong>map</strong> y <strong>array</strong> se editan por interfaz.
+          </p>
+        </div>
+        <button
+          type="button"
+          class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+          @click="cargarSchemas"
+        >
+          Recargar
+        </button>
+      </div>
+    </article>
+
+    <p
+      v-if="error"
+      class="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700"
+    >
+      {{ error }}
+    </p>
+
+    <p v-if="cargando" class="text-sm text-slate-500">Cargando esquemas...</p>
+    <p v-else-if="!selectedSchema || !schemaDraft" class="text-sm text-slate-500">No hay esquema seleccionado.</p>
+
+    <article v-else class="rounded-2xl border border-slate-200 bg-white p-5">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h4 class="text-lg font-black text-slate-900">{{ schemaDraft.title || selectedSchema.title }}</h4>
+          <p class="text-xs text-slate-500">
+            ID: <code>{{ selectedSchema.id }}</code>
+          </p>
+        </div>
+        <button
+          type="button"
+          :disabled="guardandoEdicion"
+          class="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-700 disabled:bg-slate-400"
+          @click="guardarEdicion"
+        >
+          {{ guardandoEdicion ? "Guardando..." : "Guardar cambios" }}
+        </button>
+      </div>
+
+      <div class="mt-4 grid gap-3 md:grid-cols-2">
+        <label class="space-y-1">
+          <span class="text-xs font-semibold text-slate-700">ID</span>
+          <input
+            :value="schemaDraft.id"
+            type="text"
+            class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
+            @input="updateMetaField('id', ($event.target as HTMLInputElement).value)"
+          />
+        </label>
+
+        <label class="space-y-1">
+          <span class="text-xs font-semibold text-slate-700">Título</span>
+          <input
+            :value="schemaDraft.title"
+            type="text"
+            class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
+            @input="updateMetaField('title', ($event.target as HTMLInputElement).value)"
+          />
+        </label>
+
+        <label class="space-y-1 md:col-span-2">
+          <span class="text-xs font-semibold text-slate-700">Descripción</span>
+          <input
+            :value="schemaDraft.description"
+            type="text"
+            class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
+            @input="updateMetaField('description', ($event.target as HTMLInputElement).value)"
+          />
+        </label>
+
+        <label class="space-y-1">
+          <span class="text-xs font-semibold text-slate-700">Tipo de almacenamiento</span>
+          <select
+            :value="schemaDraft.storageType"
+            class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
+            @change="updateStorageType(($event.target as HTMLSelectElement).value)"
+          >
+            <option value="document">document</option>
+            <option value="dictionary">dictionary</option>
+          </select>
+        </label>
+
+        <label class="space-y-1">
+          <span class="text-xs font-semibold text-slate-700">Colección</span>
+          <input
+            :value="schemaDraft.collectionName"
+            type="text"
+            class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
+            @input="updateMetaField('collectionName', ($event.target as HTMLInputElement).value)"
+          />
+        </label>
+
+        <label class="space-y-1">
+          <span class="text-xs font-semibold text-slate-700">Slug desde campo</span>
+          <input
+            :value="schemaDraft.slugFromField"
+            type="text"
+            class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
+            @input="updateMetaField('slugFromField', ($event.target as HTMLInputElement).value)"
+          />
+        </label>
+
+        <label class="space-y-1">
+          <span class="text-xs font-semibold text-slate-700">Campo de preview</span>
+          <input
+            :value="schemaDraft.previewField"
+            type="text"
+            class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
+            @input="updateMetaField('previewField', ($event.target as HTMLInputElement).value)"
+          />
+        </label>
+
+        <label v-if="schemaDraft.storageType === 'dictionary'" class="space-y-1">
+          <span class="text-xs font-semibold text-slate-700">Dictionary document ID</span>
+          <input
+            :value="schemaDraft.dictionaryDocumentId"
+            type="text"
+            class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
+            @input="updateMetaField('dictionaryDocumentId', ($event.target as HTMLInputElement).value)"
+          />
+        </label>
+
+        <label v-if="schemaDraft.storageType === 'dictionary'" class="space-y-1">
+          <span class="text-xs font-semibold text-slate-700">Dictionary root key</span>
+          <input
+            :value="schemaDraft.dictionaryRootKey"
+            type="text"
+            class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
+            @input="updateMetaField('dictionaryRootKey', ($event.target as HTMLInputElement).value)"
+          />
+        </label>
+      </div>
+
+      <div class="mt-5 border-t border-slate-200 pt-4">
+        <div class="mb-3 flex items-center justify-between">
+          <h5 class="text-sm font-black uppercase tracking-wide text-slate-600">Campos</h5>
+          <button
+            type="button"
+            class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            @click="agregarCampo"
+          >
+            Agregar campo
+          </button>
+        </div>
+
+        <div class="space-y-3">
+          <CmsSchemaFieldEditor
+            v-for="(field, index) in schemaDraft.fields"
+            :key="`schema-field-${index}`"
+            :model-value="field"
+            :can-remove="true"
+            :title="`Campo ${index + 1}`"
+            @update:model-value="actualizarCampo(index, $event as CmsFieldSchema)"
+            @remove="eliminarCampo(index)"
+          />
+        </div>
+      </div>
+
+      <p
+        v-if="errorEdicion"
+        class="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700"
+      >
+        {{ errorEdicion }}
+      </p>
+      <p
+        v-if="mensajeEdicion"
+        class="mt-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700"
+      >
+        {{ mensajeEdicion }}
+      </p>
+    </article>
+  </section>
+</template>
