@@ -34,7 +34,7 @@ jobs:
       - name: Bump patch version
         run: |
           npm version patch --no-git-tag-version
-          echo "NEW_VERSION=$(node -p \"require('./package.json').version\")" >> "$GITHUB_ENV"
+          echo "NEW_VERSION=$(npm pkg get version | tr -d '\"')" >> "$GITHUB_ENV"
 
       - name: Commit and tag
         run: |
