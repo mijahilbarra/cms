@@ -143,6 +143,11 @@ export declare function crearRegistroDocumento(
   schema: CmsContentSchema,
   data: Record<string, unknown>
 ): Promise<string>;
+export declare function actualizarRegistroDocumento(
+  schema: CmsContentSchema,
+  documentId: string,
+  data: Record<string, unknown>
+): Promise<void>;
 export declare function listarRegistrosDocumento(
   schema: CmsContentSchema,
   max?: number

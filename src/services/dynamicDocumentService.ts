@@ -10,6 +10,7 @@ import {
   query,
   serverTimestamp,
   setDoc,
+  updateDoc,
   type DocumentData
 } from "firebase/firestore";
 import { getCmsFirebaseServices } from "../firebase/context";
@@ -64,6 +65,18 @@ export async function eliminarRegistroDocumento(
 ): Promise<void> {
   const { firestore } = getCmsFirebaseServices();
   await deleteDoc(doc(firestore, schema.collectionName, documentId));
+}
+
+export async function actualizarRegistroDocumento(
+  schema: CmsContentSchema,
+  documentId: string,
+  data: Record<string, unknown>
+): Promise<void> {
+  const { firestore } = getCmsFirebaseServices();
+  await updateDoc(doc(firestore, schema.collectionName, documentId), {
+    ...data,
+    updatedAt: serverTimestamp()
+  });
 }
 
 const DEFAULT_DICTIONARY_DOC_ID = "main";

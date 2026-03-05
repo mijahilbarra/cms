@@ -12,6 +12,7 @@ import {
   listarSchemasContenido
 } from "../../services/contentSchemaService";
 import {
+  actualizarRegistroDocumento,
   crearRegistroDocumento,
   eliminarRegistroDocumento,
   guardarRegistroDiccionario,
@@ -89,6 +90,7 @@ const guardandoRegistro = ref(false);
 const mensajeRegistro = ref("");
 const errorRegistro = ref("");
 const documentFieldState = ref<Record<string, DocumentRelationState>>({});
+const registroEditandoId = ref("");
 
 const puedeEditarContenido = computed(() => {
   return rolActual.value === "admin" || rolActual.value === "writer" || rolActual.value === "manager";
@@ -100,6 +102,10 @@ const puedeConfigurarSchemas = computed(() => {
 
 const selectedSchema = computed(() => {
   return schemas.value.find((item) => item.id === selectedSchemaId.value) ?? null;
+});
+
+const estaEditandoRegistro = computed(() => {
+  return Boolean(registroEditandoId.value);
 });
 
 onMounted(async () => {
@@ -114,6 +120,7 @@ watch(
       formFiles.value = {};
       registros.value = [];
       documentFieldState.value = {};
+      registroEditandoId.value = "";
       return;
     }
 
@@ -572,6 +579,7 @@ function inicializarFormularioRegistro(schema: CmsContentSchema): void {
 
   formValues.value = values;
   formFiles.value = files;
+  registroEditandoId.value = "";
   mensajeRegistro.value = "";
   errorRegistro.value = "";
 }
@@ -583,13 +591,19 @@ async function cargarRegistros(schema: CmsContentSchema): Promise<void> {
     if (schema.storageType === "dictionary") {
       const dictionary = await obtenerRegistroDiccionario(schema);
       registros.value = dictionary ? [dictionary] : [];
+      registroEditandoId.value = "";
       if (dictionary) {
         hidratarFormularioDesdeRegistro(schema, dictionary);
       }
       return;
     }
 
-    registros.value = await listarRegistrosDocumento(schema, 100);
+    const encontrados = await listarRegistrosDocumento(schema, 100);
+    registros.value = encontrados;
+
+    if (registroEditandoId.value && !encontrados.some((record) => record.id === registroEditandoId.value)) {
+      registroEditandoId.value = "";
+    }
   } finally {
     cargandoRegistros.value = false;
   }
@@ -683,6 +697,26 @@ function hidratarFormularioDesdeRegistro(
   formValues.value = nextValues;
 }
 
+function editarRegistro(registro: DynamicDocumentRecord): void {
+  const schema = selectedSchema.value;
+  if (!schema || schema.storageType !== "document") {
+    return;
+  }
+
+  inicializarFormularioRegistro(schema);
+  hidratarFormularioDesdeRegistro(schema, registro);
+  registroEditandoId.value = registro.id;
+}
+
+function cancelarEdicionRegistro(): void {
+  const schema = selectedSchema.value;
+  if (!schema || schema.storageType !== "document") {
+    return;
+  }
+
+  inicializarFormularioRegistro(schema);
+}
+
 async function guardarRegistro(): Promise<void> {
   const schema = selectedSchema.value;
   if (!schema) {
@@ -693,7 +727,7 @@ async function guardarRegistro(): Promise<void> {
   errorRegistro.value = "";
 
   if (!puedeEditarContenido.value) {
-    errorRegistro.value = "Tu rol no tiene permisos para crear contenido.";
+    errorRegistro.value = "Tu rol no tiene permisos para crear o editar contenido.";
     return;
   }
 
@@ -718,8 +752,13 @@ async function guardarRegistro(): Promise<void> {
       await guardarRegistroDiccionario(schema, payload);
       mensajeRegistro.value = "Registro de diccionario actualizado.";
     } else {
-      await crearRegistroDocumento(schema, payload);
-      mensajeRegistro.value = "Registro creado correctamente.";
+      if (registroEditandoId.value) {
+        await actualizarRegistroDocumento(schema, registroEditandoId.value, payload);
+        mensajeRegistro.value = "Registro actualizado correctamente.";
+      } else {
+        await crearRegistroDocumento(schema, payload);
+        mensajeRegistro.value = "Registro creado correctamente.";
+      }
       inicializarFormularioRegistro(schema);
     }
 
@@ -920,6 +959,9 @@ async function borrarRegistro(recordId: string): Promise<void> {
   }
 
   await eliminarRegistroDocumento(schema, recordId);
+  if (registroEditandoId.value === recordId) {
+    inicializarFormularioRegistro(schema);
+  }
   await cargarRegistros(schema);
 }
 
@@ -1054,7 +1096,7 @@ function normalizarIdLocal(value: string): string {
         v-if="!puedeEditarContenido"
         class="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700"
       >
-        No tienes permisos para crear o eliminar contenido. Roles permitidos: admin, writer, manager.
+        No tienes permisos para crear, editar o eliminar contenido. Roles permitidos: admin, writer, manager.
       </p>
 
       <form
@@ -1183,6 +1225,12 @@ function normalizarIdLocal(value: string): string {
         </div>
 
         <p
+          v-if="selectedSchema.storageType === 'document' && estaEditandoRegistro"
+          class="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-700"
+        >
+          Editando registro: {{ registroEditandoId }}
+        </p>
+        <p
           v-if="errorRegistro"
           class="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700"
         >
@@ -1195,19 +1243,32 @@ function normalizarIdLocal(value: string): string {
           {{ mensajeRegistro }}
         </p>
 
-        <button
-          type="submit"
-          :disabled="guardandoRegistro || !puedeEditarContenido"
-          class="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-400"
-        >
-          {{
-            guardandoRegistro
-              ? "Guardando..."
-              : selectedSchema.storageType === "dictionary"
-                ? "Guardar diccionario"
-                : "Crear documento"
-          }}
-        </button>
+        <div class="flex flex-wrap items-center gap-2">
+          <button
+            type="submit"
+            :disabled="guardandoRegistro || !puedeEditarContenido"
+            class="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+          >
+            {{
+              guardandoRegistro
+                ? "Guardando..."
+                : selectedSchema.storageType === "dictionary"
+                  ? "Guardar diccionario"
+                  : estaEditandoRegistro
+                    ? "Guardar cambios"
+                    : "Crear documento"
+            }}
+          </button>
+          <button
+            v-if="selectedSchema.storageType === 'document' && estaEditandoRegistro"
+            type="button"
+            :disabled="guardandoRegistro || !puedeEditarContenido"
+            class="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            @click="cancelarEdicionRegistro"
+          >
+            Cancelar edición
+          </button>
+        </div>
       </form>
 
       <div class="mt-6 border-t border-slate-200 pt-5">
@@ -1220,7 +1281,12 @@ function normalizarIdLocal(value: string): string {
           <li
             v-for="record in registros"
             :key="record.id"
-            class="flex items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2"
+            :class="[
+              'flex items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2',
+              selectedSchema?.storageType === 'document' && registroEditandoId === record.id
+                ? 'border-sky-300 bg-sky-50'
+                : ''
+            ]"
           >
             <div>
               <p class="text-sm font-semibold text-slate-900">
@@ -1236,15 +1302,24 @@ function normalizarIdLocal(value: string): string {
               </RouterLink>
             </div>
 
-            <button
-              v-if="selectedSchema?.storageType === 'document'"
-              type="button"
-              :disabled="!puedeEditarContenido"
-              class="rounded-md border border-rose-300 px-2 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
-              @click="borrarRegistro(record.id)"
-            >
-              Eliminar
-            </button>
+            <div v-if="selectedSchema?.storageType === 'document'" class="flex items-center gap-2">
+              <button
+                type="button"
+                :disabled="!puedeEditarContenido || guardandoRegistro"
+                class="rounded-md border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                @click="editarRegistro(record)"
+              >
+                {{ registroEditandoId === record.id ? "Editando" : "Editar" }}
+              </button>
+              <button
+                type="button"
+                :disabled="!puedeEditarContenido"
+                class="rounded-md border border-rose-300 px-2 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
+                @click="borrarRegistro(record.id)"
+              >
+                Eliminar
+              </button>
+            </div>
           </li>
         </ul>
       </div>

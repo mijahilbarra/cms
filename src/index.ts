@@ -20,6 +20,7 @@ export {
 } from "./services/contentSchemaService";
 export {
   crearRegistroDocumento,
+  actualizarRegistroDocumento,
   listarRegistrosDocumento,
   eliminarRegistroDocumento,
   guardarRegistroDiccionario,
