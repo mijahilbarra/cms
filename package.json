@@ -1,6 +1,6 @@
 {
   "name": "@elmuki/pif-warriors-cms",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "private": true,
   "type": "module",
   "main": "./dist/pif-warriors-cms.js",
