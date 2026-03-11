@@ -50,6 +50,9 @@ function defaultValueForSchema(schema: CmsNestedFieldSchema): unknown {
   if (schema.type === "boolean") {
     return false;
   }
+  if (schema.type === "date") {
+    return "";
+  }
   if (schema.type === "numeric" || schema.type === "id") {
     return null;
   }
@@ -112,6 +115,14 @@ function numericInputValue(value: unknown): string {
     }
   }
   return "";
+}
+
+function onDateInput(raw: string): void {
+  emit("update:modelValue", normalizeDateInput(raw));
+}
+
+function dateInputValue(value: unknown): string {
+  return normalizeDateInput(value);
 }
 
 function addMapEntry(): void {
@@ -183,6 +194,68 @@ function parseDynamicInput(raw: string): unknown {
   }
 
   return raw;
+}
+
+function normalizeDateInput(value: unknown): string {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return "";
+    }
+    const fromInput = parseDateFromInput(trimmed);
+    if (fromInput) {
+      return formatDateAsInput(fromInput);
+    }
+    const parsed = new Date(trimmed);
+    if (!Number.isNaN(parsed.getTime())) {
+      return formatDateAsInput(parsed);
+    }
+    return "";
+  }
+
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return formatDateAsInput(value);
+  }
+
+  if (
+    value &&
+    typeof value === "object" &&
+    "toDate" in value &&
+    typeof (value as { toDate?: () => Date }).toDate === "function"
+  ) {
+    const asDate = (value as { toDate: () => Date }).toDate();
+    if (asDate instanceof Date && !Number.isNaN(asDate.getTime())) {
+      return formatDateAsInput(asDate);
+    }
+  }
+
+  return "";
+}
+
+function parseDateFromInput(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) {
+    return null;
+  }
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  if (
+    parsed.getUTCFullYear() !== year ||
+    parsed.getUTCMonth() + 1 !== month ||
+    parsed.getUTCDate() !== day
+  ) {
+    return null;
+  }
+  return parsed;
+}
+
+function formatDateAsInput(date: Date): string {
+  const year = String(date.getUTCFullYear()).padStart(4, "0");
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 </script>
 
@@ -321,6 +394,16 @@ function parseDynamicInput(raw: string): unknown {
       <option value="">Selecciona una opción</option>
       <option v-for="option in schema.options || []" :key="option" :value="option">{{ option }}</option>
     </select>
+
+    <input
+      v-else-if="schema.type === 'date'"
+      :value="dateInputValue(modelValue)"
+      type="date"
+      :placeholder="schema.placeholder || ''"
+      :disabled="disabled"
+      class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500 disabled:bg-slate-100"
+      @input="onDateInput(($event.target as HTMLInputElement).value)"
+    />
 
     <input
       v-else-if="schema.type === 'numeric' || schema.type === 'id'"

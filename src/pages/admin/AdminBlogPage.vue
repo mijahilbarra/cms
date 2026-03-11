@@ -170,6 +170,8 @@ function inicializarFormularioRegistro(schema: CmsContentSchema): void {
       values[field.key] = [];
     } else if (field.type === "map") {
       values[field.key] = {};
+    } else if (field.type === "date") {
+      values[field.key] = "";
     } else if (field.type === "numeric" || field.type === "id") {
       values[field.key] = null;
     } else if (field.type === "document") {
@@ -290,6 +292,8 @@ function hidratarFormularioDesdeRegistro(
       nextValues[field.key] = Boolean(value);
     } else if (field.type === "array" || field.type === "map") {
       nextValues[field.key] = parsearValorComplejo(field, value);
+    } else if (field.type === "date") {
+      nextValues[field.key] = normalizarFechaEntrada(value);
     } else if (field.type === "numeric") {
       nextValues[field.key] = normalizarNumeroEntrada(value);
     } else if (field.type === "id") {
@@ -406,7 +410,11 @@ async function resolverValorCampo(
   }
 
   if (field.type === "array" || field.type === "map") {
-    return parsearValorComplejo(field, formValues.value[field.key]);
+    return parsearValorComplejo(field, formValues.value[field.key], true);
+  }
+
+  if (field.type === "date") {
+    return valorFechaFirestore(field.key);
   }
 
   if (field.type === "numeric") {
@@ -468,12 +476,23 @@ function validarCampoRequerido(schema: CmsContentSchema, field: CmsFieldSchema, 
     return;
   }
 
+  if (field.type === "date") {
+    if (!(value instanceof Date) || Number.isNaN(value.getTime())) {
+      throw new Error(`El campo \"${field.label}\" es obligatorio y debe ser una fecha válida.`);
+    }
+    return;
+  }
+
   if (typeof value !== "string" || !value.trim()) {
     throw new Error(`El campo \"${field.label}\" es obligatorio.`);
   }
 }
 
-function parsearValorComplejo(field: CmsFieldSchema, parsed: unknown): unknown {
+function parsearValorComplejo(
+  field: CmsFieldSchema,
+  parsed: unknown,
+  paraFirestore = false
+): unknown {
   if (typeof parsed === "string") {
     const trimmed = parsed.trim();
     const legacyStringAsJson = trimmed.startsWith("{") || trimmed.startsWith("[");
@@ -492,7 +511,12 @@ function parsearValorComplejo(field: CmsFieldSchema, parsed: unknown): unknown {
     const arrayValue = Array.isArray(parsed) ? parsed : [];
     if (field.itemSchema) {
       return arrayValue.map((item, index) =>
-        normalizarValorContraNodo(field.itemSchema as CmsNestedFieldSchema, item, `${field.label}[${index}]`)
+        normalizarValorContraNodo(
+          field.itemSchema as CmsNestedFieldSchema,
+          item,
+          `${field.label}[${index}]`,
+          paraFirestore
+        )
       );
     }
     return arrayValue;
@@ -501,7 +525,7 @@ function parsearValorComplejo(field: CmsFieldSchema, parsed: unknown): unknown {
   const mapValue = esRegistro(parsed) ? parsed : {};
 
   if (Array.isArray(field.mapFields) && field.mapFields.length > 0) {
-    return normalizarValorContraMapFields(field.mapFields, mapValue, field.label);
+    return normalizarValorContraMapFields(field.mapFields, mapValue, field.label, paraFirestore);
   }
 
   return mapValue;
@@ -510,7 +534,8 @@ function parsearValorComplejo(field: CmsFieldSchema, parsed: unknown): unknown {
 function normalizarValorContraMapFields(
   fields: CmsFieldSchema[],
   value: Record<string, unknown>,
-  contexto: string
+  contexto: string,
+  paraFirestore = false
 ): Record<string, unknown> {
   const output: Record<string, unknown> = {};
 
@@ -523,7 +548,7 @@ function normalizarValorContraMapFields(
       continue;
     }
 
-    output[key] = normalizarValorContraNodo(field, value[key], `${contexto}.${key}`);
+    output[key] = normalizarValorContraNodo(field, value[key], `${contexto}.${key}`, paraFirestore);
   }
 
   return output;
@@ -532,7 +557,8 @@ function normalizarValorContraMapFields(
 function normalizarValorContraNodo(
   schema: CmsNestedFieldSchema,
   value: unknown,
-  contexto: string
+  contexto: string,
+  paraFirestore = false
 ): unknown {
   if (schema.type === "array") {
     if (!Array.isArray(value)) {
@@ -541,7 +567,9 @@ function normalizarValorContraNodo(
     if (!schema.itemSchema) {
       return value;
     }
-    return value.map((item, index) => normalizarValorContraNodo(schema.itemSchema!, item, `${contexto}[${index}]`));
+    return value.map((item, index) =>
+      normalizarValorContraNodo(schema.itemSchema!, item, `${contexto}[${index}]`, paraFirestore)
+    );
   }
 
   if (schema.type === "map") {
@@ -551,7 +579,7 @@ function normalizarValorContraNodo(
     if (!Array.isArray(schema.mapFields) || schema.mapFields.length === 0) {
       return value;
     }
-    return normalizarValorContraMapFields(schema.mapFields, value, contexto);
+    return normalizarValorContraMapFields(schema.mapFields, value, contexto, paraFirestore);
   }
 
   if (schema.type === "boolean") {
@@ -580,6 +608,14 @@ function normalizarValorContraNodo(
       throw new Error(`\"${contexto}\" debe ser un número entero mayor o igual a 1.`);
     }
     return value;
+  }
+
+  if (schema.type === "date") {
+    const parsedDate = resolverFechaDesdeValor(value);
+    if (!parsedDate) {
+      throw new Error(`\"${contexto}\" debe ser una fecha válida.`);
+    }
+    return paraFirestore ? parsedDate : normalizarFechaEntrada(parsedDate);
   }
 
   if (typeof value !== "string") {
@@ -636,6 +672,14 @@ function valorTexto(key: string): string {
   return typeof value === "string" ? value : "";
 }
 
+function valorFechaInput(key: string): string {
+  return normalizarFechaEntrada(formValues.value[key]);
+}
+
+function valorFechaFirestore(key: string): Date | null {
+  return resolverFechaDesdeValor(formValues.value[key]);
+}
+
 function valorNumero(key: string): number | null {
   return normalizarNumeroEntrada(formValues.value[key]);
 }
@@ -647,6 +691,10 @@ function valorNumeroInput(key: string): string {
 
 function setTexto(key: string, value: string): void {
   formValues.value[key] = value;
+}
+
+function setFecha(key: string, value: string): void {
+  formValues.value[key] = normalizarFechaEntrada(value);
 }
 
 function setNumero(key: string, raw: string): void {
@@ -700,6 +748,15 @@ function valorPreviewRegistro(record: DynamicDocumentRecord, schema: CmsContentS
   }
 
   const value = record.data[previewKey];
+  const previewField = schema.fields.find((field) => field.key === previewKey);
+
+  if (previewField?.type === "date") {
+    const formattedDate = formatearFechaVisual(value);
+    if (formattedDate) {
+      return formattedDate;
+    }
+  }
+
   if (typeof value === "string" && value.trim()) {
     return value;
   }
@@ -757,6 +814,94 @@ function normalizarIdEntrada(value: unknown): number | null {
   return parsed;
 }
 
+function normalizarFechaEntrada(value: unknown): string {
+  const parsed = resolverFechaDesdeValor(value);
+  if (!parsed) {
+    return "";
+  }
+  return formatearFechaInput(parsed);
+}
+
+function resolverFechaDesdeValor(value: unknown): Date | null {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value;
+  }
+
+  if (
+    value &&
+    typeof value === "object" &&
+    "toDate" in value &&
+    typeof (value as { toDate?: () => Date }).toDate === "function"
+  ) {
+    const dateValue = (value as { toDate: () => Date }).toDate();
+    if (dateValue instanceof Date && !Number.isNaN(dateValue.getTime())) {
+      return dateValue;
+    }
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+    const fromInput = parsearFechaDesdeInput(trimmed);
+    if (fromInput) {
+      return fromInput;
+    }
+    const parsed = new Date(trimmed);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed;
+    }
+    return null;
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed;
+    }
+  }
+
+  return null;
+}
+
+function parsearFechaDesdeInput(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) {
+    return null;
+  }
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  if (
+    parsed.getUTCFullYear() !== year ||
+    parsed.getUTCMonth() + 1 !== month ||
+    parsed.getUTCDate() !== day
+  ) {
+    return null;
+  }
+  return parsed;
+}
+
+function formatearFechaInput(date: Date): string {
+  const year = String(date.getUTCFullYear()).padStart(4, "0");
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatearFechaVisual(value: unknown): string {
+  const parsed = resolverFechaDesdeValor(value);
+  if (!parsed) {
+    return "";
+  }
+  const day = String(parsed.getUTCDate()).padStart(2, "0");
+  const month = String(parsed.getUTCMonth() + 1).padStart(2, "0");
+  const year = String(parsed.getUTCFullYear()).padStart(4, "0");
+  return `${day}/${month}/${year}`;
+}
+
 function esCampoIdAutonumerico(field: CmsFieldSchema): boolean {
   return field.type === "id" && selectedSchema.value?.storageType === "document";
 }
@@ -800,6 +945,16 @@ function esCampoIdAutonumerico(field: CmsFieldSchema): boolean {
             :disabled="!puedeEditarContenido"
             class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500 disabled:bg-slate-100"
             @input="setTexto(field.key, ($event.target as HTMLInputElement).value)"
+          />
+
+          <input
+            v-else-if="field.type === 'date'"
+            :value="valorFechaInput(field.key)"
+            type="date"
+            :placeholder="field.placeholder || ''"
+            :disabled="!puedeEditarContenido"
+            class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500 disabled:bg-slate-100"
+            @input="setFecha(field.key, ($event.target as HTMLInputElement).value)"
           />
 
           <div v-else-if="field.type === 'numeric' || field.type === 'id'" class="space-y-1">

@@ -21,6 +21,7 @@ export type CmsStorageType = "document" | "dictionary";
 
 export type CmsFieldType =
   | "text"
+  | "date"
   | "numeric"
   | "id"
   | "textarea"

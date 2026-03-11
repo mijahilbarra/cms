@@ -250,6 +250,9 @@ function buildPayloadFromSchema(schema, source) {
       case "map":
         payload[key] = normalizeMapValue(field, incoming);
         break;
+      case "date":
+        payload[key] = normalizeDateValue(incoming);
+        break;
       case "numeric":
       case "id":
         payload[key] = normalizeNumberValue(incoming, field.type === "id");
@@ -323,6 +326,10 @@ function normalizeNestedValue(schemaNode, incoming) {
     return normalizeNumberValue(incoming, schemaNode.type === "id");
   }
 
+  if (schemaNode.type === "date") {
+    return normalizeDateValue(incoming);
+  }
+
   return typeof incoming === "string" ? incoming : "";
 }
 
@@ -373,6 +380,56 @@ function normalizeNumberValue(incoming, integerOnly = false) {
   }
 
   return null;
+}
+
+function normalizeDateValue(incoming) {
+  if (incoming instanceof Date && !Number.isNaN(incoming.getTime())) {
+    return incoming;
+  }
+
+  if (typeof incoming === "string") {
+    const trimmed = incoming.trim();
+    if (!trimmed) {
+      return null;
+    }
+    const fromInput = parseDateFromInput(trimmed);
+    if (fromInput) {
+      return fromInput;
+    }
+    const parsed = new Date(trimmed);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed;
+    }
+    return null;
+  }
+
+  if (typeof incoming === "number" && Number.isFinite(incoming)) {
+    const parsed = new Date(incoming);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed;
+    }
+  }
+
+  return null;
+}
+
+function parseDateFromInput(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value));
+  if (!match) {
+    return null;
+  }
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  if (
+    parsed.getUTCFullYear() !== year ||
+    parsed.getUTCMonth() + 1 !== month ||
+    parsed.getUTCDate() !== day
+  ) {
+    return null;
+  }
+  return parsed;
 }
 
 function toSlug(value) {
