@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import RichTextEditor from "../../components/blog/RichTextEditor.vue";
-import CmsNestedValueEditor from "../../components/admin/CmsNestedValueEditor.vue";
+import CmsFieldValueInput from "../../components/admin/CmsFieldValueInput.vue";
 import { rolActual } from "../../firebase/auth";
 import { uploadImageWithCompression } from "../../firebase/storage";
 import { listarSchemasContenido } from "../../services/contentSchemaService";
@@ -701,6 +700,46 @@ function setNumero(key: string, raw: string): void {
   formValues.value[key] = normalizarNumeroEntrada(raw);
 }
 
+function valorCampoParaInput(field: CmsFieldSchema): unknown {
+  if (field.type === "boolean") {
+    return valorBoolean(field.key);
+  }
+  if (field.type === "array" || field.type === "map") {
+    return valorComplejo(field.key);
+  }
+  if (field.type === "numeric" || field.type === "id") {
+    return valorNumeroInput(field.key);
+  }
+  if (field.type === "date") {
+    return valorFechaInput(field.key);
+  }
+  return valorTexto(field.key);
+}
+
+function actualizarValorCampo(field: CmsFieldSchema, value: unknown): void {
+  if (field.type === "boolean") {
+    setBoolean(field.key, Boolean(value));
+    return;
+  }
+
+  if (field.type === "array" || field.type === "map") {
+    setValorComplejo(field.key, value);
+    return;
+  }
+
+  if (field.type === "numeric" || field.type === "id") {
+    setNumero(field.key, typeof value === "string" ? value : "");
+    return;
+  }
+
+  if (field.type === "date") {
+    setFecha(field.key, typeof value === "string" ? value : "");
+    return;
+  }
+
+  setTexto(field.key, typeof value === "string" ? value : "");
+}
+
 function opcionesDocumento(field: CmsFieldSchema): DocumentRelationOption[] {
   return documentFieldState.value[field.key]?.options ?? [];
 }
@@ -731,9 +770,8 @@ function setBoolean(key: string, value: boolean): void {
   formValues.value[key] = value;
 }
 
-function setArchivo(key: string, event: Event): void {
-  const input = event.target as HTMLInputElement;
-  formFiles.value[key] = input.files?.[0] ?? null;
+function setArchivo(key: string, file: File | null): void {
+  formFiles.value[key] = file;
 }
 
 function quitarImagen(key: string): void {
@@ -937,145 +975,17 @@ function esCampoIdAutonumerico(field: CmsFieldSchema): boolean {
           <label class="block text-sm font-semibold text-slate-700">{{ field.label }}</label>
           <p v-if="field.helpText" class="text-xs text-slate-500">{{ field.helpText }}</p>
 
-          <input
-            v-if="field.type === 'text'"
-            :value="valorTexto(field.key)"
-            type="text"
-            :placeholder="field.placeholder || ''"
+          <CmsFieldValueInput
+            :field="field"
+            :model-value="valorCampoParaInput(field)"
             :disabled="!puedeEditarContenido"
-            class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500 disabled:bg-slate-100"
-            @input="setTexto(field.key, ($event.target as HTMLInputElement).value)"
-          />
-
-          <input
-            v-else-if="field.type === 'date'"
-            :value="valorFechaInput(field.key)"
-            type="date"
-            :placeholder="field.placeholder || ''"
-            :disabled="!puedeEditarContenido"
-            class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500 disabled:bg-slate-100"
-            @input="setFecha(field.key, ($event.target as HTMLInputElement).value)"
-          />
-
-          <div v-else-if="field.type === 'numeric' || field.type === 'id'" class="space-y-1">
-            <input
-              :value="valorNumeroInput(field.key)"
-              type="number"
-              :step="field.type === 'id' ? '1' : 'any'"
-              :min="field.type === 'id' ? 1 : undefined"
-              :placeholder="field.placeholder || ''"
-              :disabled="!puedeEditarContenido || esCampoIdAutonumerico(field)"
-              class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500 disabled:bg-slate-100"
-              @input="setNumero(field.key, ($event.target as HTMLInputElement).value)"
-            />
-            <p v-if="esCampoIdAutonumerico(field)" class="text-xs text-slate-500">
-              Se genera automáticamente al crear el documento.
-            </p>
-          </div>
-
-          <textarea
-            v-else-if="field.type === 'textarea'"
-            :value="valorTexto(field.key)"
-            rows="4"
-            :placeholder="field.placeholder || ''"
-            :disabled="!puedeEditarContenido"
-            class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500 disabled:bg-slate-100"
-            @input="setTexto(field.key, ($event.target as HTMLTextAreaElement).value)"
-          ></textarea>
-
-          <select
-            v-else-if="field.type === 'select'"
-            :value="valorTexto(field.key)"
-            :disabled="!puedeEditarContenido"
-            class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500 disabled:bg-slate-100"
-            @change="setTexto(field.key, ($event.target as HTMLSelectElement).value)"
-          >
-            <option value="">Selecciona una opción</option>
-            <option
-              v-for="option in field.options || []"
-              :key="option"
-              :value="option"
-            >
-              {{ option }}
-            </option>
-          </select>
-
-          <div v-else-if="field.type === 'document'" class="space-y-2">
-            <select
-              :value="valorTexto(field.key)"
-              :disabled="!puedeEditarContenido"
-              class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500 disabled:bg-slate-100"
-              @change="setTexto(field.key, ($event.target as HTMLSelectElement).value)"
-            >
-              <option value="">Selecciona un documento</option>
-              <option
-                v-for="option in opcionesDocumento(field)"
-                :key="option.id"
-                :value="option.id"
-              >
-                {{ option.label }}
-              </option>
-            </select>
-            <p v-if="hintDocumentoSeleccionado(field)" class="text-xs text-slate-500">
-              {{ hintDocumentoSeleccionado(field) }}
-            </p>
-          </div>
-
-          <label
-            v-else-if="field.type === 'boolean'"
-            class="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-700"
-          >
-            <input
-              :checked="valorBoolean(field.key)"
-              type="checkbox"
-              :disabled="!puedeEditarContenido"
-              @change="setBoolean(field.key, ($event.target as HTMLInputElement).checked)"
-            />
-            Activo
-          </label>
-
-          <div v-else-if="field.type === 'image'" class="space-y-2">
-            <input
-              type="file"
-              accept="image/*"
-              :disabled="!puedeEditarContenido"
-              class="block w-full text-sm text-slate-600 disabled:opacity-60"
-              @change="setArchivo(field.key, $event)"
-            />
-            <p v-if="valorTexto(field.key)" class="text-xs text-slate-500 break-all">
-              URL actual: {{ valorTexto(field.key) }}
-            </p>
-            <img
-              v-if="valorTexto(field.key)"
-              :src="valorTexto(field.key)"
-              alt="Vista previa"
-              class="max-h-32 rounded-md border border-slate-200 object-cover"
-            />
-            <button
-              v-if="valorTexto(field.key)"
-              type="button"
-              class="rounded-md border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-              :disabled="!puedeEditarContenido"
-              @click="quitarImagen(field.key)"
-            >
-              Quitar URL
-            </button>
-          </div>
-
-          <CmsNestedValueEditor
-            v-else-if="field.type === 'array' || field.type === 'map'"
-            :schema="field"
-            :model-value="valorComplejo(field.key)"
-            :disabled="!puedeEditarContenido"
-            @update:model-value="setValorComplejo(field.key, $event)"
-          />
-
-          <RichTextEditor
-            v-else-if="field.type === 'richtext'"
-            :model-value="valorTexto(field.key)"
-            :subir-imagen="subirImagenEditor"
-            :disabled="!puedeEditarContenido"
-            @update:model-value="setTexto(field.key, $event)"
+            :is-auto-id="esCampoIdAutonumerico(field)"
+            :document-options="opcionesDocumento(field)"
+            :document-hint="hintDocumentoSeleccionado(field)"
+            :upload-image="subirImagenEditor"
+            @update:model-value="actualizarValorCampo(field, $event)"
+            @update:file="setArchivo(field.key, $event)"
+            @remove-image="quitarImagen(field.key)"
           />
         </div>
 
