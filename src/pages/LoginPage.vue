@@ -31,7 +31,7 @@ async function submit(): Promise<void> {
 <template>
   <main class="cms-main-shell mx-auto max-w-md px-5 py-14">
     <h1 class="text-3xl font-black text-[var(--pw-text)]">Ingresar</h1>
-    <p class="mt-2 text-sm text-[var(--pw-muted-text)]">Accede para administrar blogs y vistas.</p>
+    <p class="mt-2 text-sm text-[var(--pw-muted-text)]">Accede para administrar contenido y esquemas.</p>
 
     <form class="mt-8 space-y-4 rounded-xl border border-[var(--pw-border)] bg-[var(--pw-surface)] p-5" @submit.prevent="submit">
       <div>

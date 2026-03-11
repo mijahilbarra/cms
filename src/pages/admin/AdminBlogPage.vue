@@ -1,16 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
-import { RouterLink, useRoute, useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import RichTextEditor from "../../components/blog/RichTextEditor.vue";
 import CmsNestedValueEditor from "../../components/admin/CmsNestedValueEditor.vue";
 import { rolActual } from "../../firebase/auth";
 import { uploadImageWithCompression } from "../../firebase/storage";
-import {
-  DEFAULT_BLOG_DOCUMENT_SCHEMA,
-  ensureDefaultSchemas,
-  guardarSchemaContenido,
-  listarSchemasContenido
-} from "../../services/contentSchemaService";
+import { listarSchemasContenido } from "../../services/contentSchemaService";
 import {
   actualizarRegistroDocumento,
   crearRegistroDocumento,
@@ -23,21 +18,9 @@ import {
 import type {
   CmsContentSchema,
   CmsFieldSchema,
-  CmsFieldType,
   CmsNestedFieldSchema
 } from "../../types/contentSchema";
 import { toSlug } from "../../utils/slug";
-
-type EditableFieldDraft = {
-  key: string;
-  label: string;
-  type: CmsFieldType;
-  required: boolean;
-  placeholder: string;
-  helpText: string;
-  optionsText: string;
-  structureJson: string;
-};
 
 type DocumentRelationOption = {
   id: string;
@@ -50,37 +33,12 @@ type DocumentRelationState = {
   byId: Record<string, DynamicDocumentRecord>;
 };
 
-const FIELD_TYPE_OPTIONS: Array<{ label: string; value: CmsFieldType }> = [
-  { label: "Texto", value: "text" },
-  { label: "Textarea", value: "textarea" },
-  { label: "Editor enriquecido", value: "richtext" },
-  { label: "Imagen", value: "image" },
-  { label: "Select", value: "select" },
-  { label: "Documento (relación)", value: "document" },
-  { label: "Boolean", value: "boolean" },
-  { label: "Array", value: "array" },
-  { label: "Map", value: "map" }
-];
-
 const route = useRoute();
 const router = useRouter();
 const schemas = ref<CmsContentSchema[]>([]);
 const selectedSchemaId = ref("");
 const cargandoSchemas = ref(false);
-const guardandoSchema = ref(false);
-const mensajeSchema = ref("");
 const errorSchema = ref("");
-
-const schemaDraft = ref({
-  id: "",
-  title: "",
-  description: "",
-  storageType: "document" as "document" | "dictionary",
-  collectionName: "",
-  slugFromField: "",
-  previewField: ""
-});
-const schemaFieldDrafts = ref<EditableFieldDraft[]>([]);
 
 const formValues = ref<Record<string, unknown>>({});
 const formFiles = ref<Record<string, File | null>>({});
@@ -94,10 +52,6 @@ const registroEditandoId = ref("");
 
 const puedeEditarContenido = computed(() => {
   return rolActual.value === "admin" || rolActual.value === "writer" || rolActual.value === "manager";
-});
-
-const puedeConfigurarSchemas = computed(() => {
-  return rolActual.value === "admin" || rolActual.value === "manager";
 });
 
 const selectedSchema = computed(() => {
@@ -124,7 +78,6 @@ watch(
       return;
     }
 
-    hidratarEditorSchema(schema);
     inicializarFormularioRegistro(schema);
     await cargarRegistros(schema);
     await cargarOpcionesRelaciones(schema);
@@ -155,10 +108,6 @@ async function cargarTodo(): Promise<void> {
 
   try {
     await cargarSchemas();
-    if (!schemas.value.length) {
-      await ensureDefaultSchemas();
-      await cargarSchemas();
-    }
   } catch {
     errorSchema.value = "No se pudieron cargar los tipos de contenido.";
   } finally {
@@ -186,131 +135,8 @@ async function cargarSchemas(): Promise<void> {
     return;
   }
 
-  const blogSchema = encontrados.find((schema) => schema.id === DEFAULT_BLOG_DOCUMENT_SCHEMA.id);
-  selectedSchemaId.value = blogSchema?.id ?? encontrados[0].id;
+  selectedSchemaId.value = encontrados[0].id;
   await actualizarRutaSchema(selectedSchemaId.value);
-}
-
-function crearCampoVacio(): EditableFieldDraft {
-  return {
-    key: "",
-    label: "",
-    type: "text",
-    required: false,
-    placeholder: "",
-    helpText: "",
-    optionsText: "",
-    structureJson: ""
-  };
-}
-
-function crearDraftDesdeCampo(field: CmsFieldSchema): EditableFieldDraft {
-  return {
-    key: field.key,
-    label: field.label,
-    type: field.type,
-    required: Boolean(field.required),
-    placeholder: field.placeholder ?? "",
-    helpText: field.helpText ?? "",
-    optionsText: Array.isArray(field.options) ? field.options.join(", ") : "",
-    structureJson: serializarEstructuraCampo(field)
-  };
-}
-
-function cargarPlantillaBlog(): void {
-  schemaDraft.value = {
-    id: "blog",
-    title: "Blog",
-    description: "Contenido público del blog",
-    storageType: "document",
-    collectionName: "blogs",
-    slugFromField: "titulo",
-    previewField: "titulo"
-  };
-
-  schemaFieldDrafts.value = DEFAULT_BLOG_DOCUMENT_SCHEMA.fields.map((field) => crearDraftDesdeCampo(field));
-
-  mensajeSchema.value = "Plantilla de Blog cargada en el formulario de schema.";
-  errorSchema.value = "";
-}
-
-function agregarCampoSchema(): void {
-  schemaFieldDrafts.value.push(crearCampoVacio());
-}
-
-function eliminarCampoSchema(index: number): void {
-  schemaFieldDrafts.value.splice(index, 1);
-}
-
-async function guardarSchema(): Promise<void> {
-  mensajeSchema.value = "";
-  errorSchema.value = "";
-
-  if (!puedeConfigurarSchemas.value) {
-    errorSchema.value = "Tu rol no puede crear ni editar tipos de contenido.";
-    return;
-  }
-
-  if (!schemaDraft.value.id || !schemaDraft.value.title || !schemaDraft.value.collectionName) {
-    errorSchema.value = "Completa id, título y colección del schema.";
-    return;
-  }
-
-  let fields: CmsFieldSchema[] = [];
-  try {
-    fields = schemaFieldDrafts.value
-      .map((field) => convertirCampo(field))
-      .filter((field): field is CmsFieldSchema => field !== null);
-  } catch (error) {
-    errorSchema.value = error instanceof Error ? error.message : "Hay un error en la definición de campos.";
-    return;
-  }
-
-  if (!fields.length) {
-    errorSchema.value = "Agrega al menos un campo válido al schema.";
-    return;
-  }
-
-  guardandoSchema.value = true;
-
-  try {
-    await guardarSchemaContenido({
-      id: schemaDraft.value.id,
-      title: schemaDraft.value.title,
-      description: schemaDraft.value.description,
-      storageType: schemaDraft.value.storageType,
-      collectionName: schemaDraft.value.collectionName,
-      slugFromField: schemaDraft.value.slugFromField,
-      previewField: schemaDraft.value.previewField,
-      fields
-    });
-
-    await cargarSchemas();
-
-    const savedId = normalizarIdLocal(schemaDraft.value.id);
-    selectedSchemaId.value = savedId;
-    await actualizarRutaSchema(savedId);
-    window.dispatchEvent(new Event("cms-schemas-updated"));
-    mensajeSchema.value = "Schema guardado correctamente.";
-  } catch {
-    errorSchema.value = "No se pudo guardar el schema.";
-  } finally {
-    guardandoSchema.value = false;
-  }
-}
-
-function hidratarEditorSchema(schema: CmsContentSchema): void {
-  schemaDraft.value = {
-    id: schema.id,
-    title: schema.title,
-    description: schema.description ?? "",
-    storageType: schema.storageType,
-    collectionName: schema.collectionName,
-    slugFromField: schema.slugFromField ?? "",
-    previewField: schema.previewField ?? ""
-  };
-
-  schemaFieldDrafts.value = schema.fields.map((field) => crearDraftDesdeCampo(field));
 }
 
 async function actualizarRutaSchema(schemaId: string): Promise<void> {
@@ -327,229 +153,6 @@ async function actualizarRutaSchema(schemaId: string): Promise<void> {
       schema: schemaId
     }
   });
-}
-
-function convertirCampo(field: EditableFieldDraft): CmsFieldSchema | null {
-  const key = field.key.trim();
-  const label = field.label.trim();
-
-  if (!key || !label) {
-    return null;
-  }
-
-  const converted: CmsFieldSchema = {
-    key,
-    label,
-    type: field.type,
-    required: field.required,
-    placeholder: field.placeholder,
-    helpText: field.helpText,
-    options: field.type === "select" ? parsearOpciones(field.optionsText) : []
-  };
-
-  if (field.type === "array") {
-    converted.itemSchema = parsearItemArray(field.structureJson, field.label || field.key);
-  }
-
-  if (field.type === "map") {
-    converted.mapFields = parsearMapFields(field.structureJson, field.label || field.key);
-  }
-
-  return converted;
-}
-
-function parsearOpciones(value: string): string[] {
-  return value
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-function serializarEstructuraCampo(field: CmsFieldSchema): string {
-  if (field.type === "array") {
-    return JSON.stringify(
-      {
-        item: field.itemSchema ?? { type: "text" }
-      },
-      null,
-      2
-    );
-  }
-
-  if (field.type === "map") {
-    return JSON.stringify(
-      {
-        fields: field.mapFields ?? []
-      },
-      null,
-      2
-    );
-  }
-
-  return "";
-}
-
-function placeholderEstructuraPorTipo(type: CmsFieldType): string {
-  if (type === "array") {
-    return '{\n  "item": {\n    "type": "map",\n    "mapFields": [\n      { "key": "titulo", "label": "Título", "type": "text" }\n    ]\n  }\n}';
-  }
-  if (type === "map") {
-    return '{\n  "fields": [\n    { "key": "titulo", "label": "Título", "type": "text" },\n    {\n      "key": "meta",\n      "label": "Meta",\n      "type": "map",\n      "mapFields": [\n        { "key": "autor", "label": "Autor", "type": "text" }\n      ]\n    }\n  ]\n}';
-  }
-  return "";
-}
-
-function parsearItemArray(raw: string, contexto: string): CmsNestedFieldSchema {
-  const trimmed = raw.trim();
-  if (!trimmed) {
-    return { type: "text" };
-  }
-
-  const parsed = parsearJsonObjeto(trimmed, `${contexto}: estructura de array inválida`);
-  if (!esRegistro(parsed)) {
-    throw new Error(`${contexto}: la estructura de array debe ser un objeto JSON.`);
-  }
-
-  const item = parsed.item;
-  if (!esRegistro(item)) {
-    throw new Error(`${contexto}: define la clave "item" con su schema.`);
-  }
-
-  return normalizarSchemaAnidado(item, `${contexto}.item`);
-}
-
-function parsearMapFields(raw: string, contexto: string): CmsFieldSchema[] {
-  const trimmed = raw.trim();
-  if (!trimmed) {
-    return [];
-  }
-
-  const parsed = parsearJsonObjeto(trimmed, `${contexto}: estructura de map inválida`);
-  if (!esRegistro(parsed)) {
-    throw new Error(`${contexto}: la estructura de map debe ser un objeto JSON.`);
-  }
-
-  const fields = parsed.fields;
-  if (!Array.isArray(fields)) {
-    throw new Error(`${contexto}: define "fields" como un arreglo.`);
-  }
-
-  return fields.map((entry, index) => normalizarSchemaCampo(entry, `${contexto}.fields[${index}]`));
-}
-
-function normalizarSchemaCampo(value: unknown, contexto: string): CmsFieldSchema {
-  if (!esRegistro(value)) {
-    throw new Error(`${contexto}: cada campo debe ser un objeto JSON.`);
-  }
-
-  const key = typeof value.key === "string" ? value.key.trim() : "";
-  const label = typeof value.label === "string" ? value.label.trim() : "";
-  if (!key || !label) {
-    throw new Error(`${contexto}: cada campo requiere "key" y "label".`);
-  }
-
-  const type = resolveFieldType(value.type);
-  const output: CmsFieldSchema = {
-    key,
-    label,
-    type,
-    required: Boolean(value.required),
-    placeholder: typeof value.placeholder === "string" ? value.placeholder : "",
-    helpText: typeof value.helpText === "string" ? value.helpText : "",
-    options: type === "select" ? parsearOpcionesDesdeUnknown(value.options) : [],
-    documentSchemaId: type === "document" ? parsearTexto(value.documentSchemaId) : "",
-    documentLabelField: type === "document" ? parsearTexto(value.documentLabelField) : ""
-  };
-
-  if (type === "array") {
-    const item = value.itemSchema;
-    if (!esRegistro(item)) {
-      throw new Error(`${contexto}: un campo array requiere "itemSchema".`);
-    }
-    output.itemSchema = normalizarSchemaAnidado(item, `${contexto}.itemSchema`);
-  }
-
-  if (type === "map") {
-    const mapFields = value.mapFields;
-    if (!Array.isArray(mapFields)) {
-      throw new Error(`${contexto}: un campo map requiere "mapFields".`);
-    }
-    output.mapFields = mapFields.map((entry, index) =>
-      normalizarSchemaCampo(entry, `${contexto}.mapFields[${index}]`)
-    );
-  }
-
-  return output;
-}
-
-function normalizarSchemaAnidado(value: unknown, contexto: string): CmsNestedFieldSchema {
-  if (!esRegistro(value)) {
-    throw new Error(`${contexto}: el nodo debe ser un objeto JSON.`);
-  }
-
-  const type = resolveFieldType(value.type);
-  const output: CmsNestedFieldSchema = {
-    type,
-    required: Boolean(value.required),
-    placeholder: typeof value.placeholder === "string" ? value.placeholder : "",
-    helpText: typeof value.helpText === "string" ? value.helpText : "",
-    options: type === "select" ? parsearOpcionesDesdeUnknown(value.options) : [],
-    documentSchemaId: type === "document" ? parsearTexto(value.documentSchemaId) : "",
-    documentLabelField: type === "document" ? parsearTexto(value.documentLabelField) : ""
-  };
-
-  if (type === "array") {
-    const item = value.itemSchema;
-    if (!esRegistro(item)) {
-      throw new Error(`${contexto}: un nodo array requiere "itemSchema".`);
-    }
-    output.itemSchema = normalizarSchemaAnidado(item, `${contexto}.itemSchema`);
-  }
-
-  if (type === "map") {
-    const mapFields = value.mapFields;
-    if (!Array.isArray(mapFields)) {
-      throw new Error(`${contexto}: un nodo map requiere "mapFields".`);
-    }
-    output.mapFields = mapFields.map((entry, index) =>
-      normalizarSchemaCampo(entry, `${contexto}.mapFields[${index}]`)
-    );
-  }
-
-  return output;
-}
-
-function resolveFieldType(value: unknown): CmsFieldType {
-  if (
-    value === "text" ||
-    value === "textarea" ||
-    value === "richtext" ||
-    value === "image" ||
-    value === "select" ||
-    value === "document" ||
-    value === "boolean" ||
-    value === "array" ||
-    value === "map"
-  ) {
-    return value;
-  }
-  throw new Error(`Tipo de campo no soportado: ${String(value || "")}`);
-}
-
-function parsearOpcionesDesdeUnknown(value: unknown): string[] {
-  return Array.isArray(value) ? value.map((item) => String(item).trim()).filter(Boolean) : [];
-}
-
-function parsearTexto(value: unknown): string {
-  return typeof value === "string" ? value.trim() : "";
-}
-
-function parsearJsonObjeto(value: string, errorMessage: string): unknown {
-  try {
-    return JSON.parse(value);
-  } catch {
-    throw new Error(errorMessage);
-  }
 }
 
 function esRegistro(value: unknown): value is Record<string, unknown> {
@@ -1054,27 +657,12 @@ function valorPreviewRegistro(record: DynamicDocumentRecord, schema: CmsContentS
   return record.id;
 }
 
-function blogPublicUrl(record: DynamicDocumentRecord): string {
-  const slug = record.data.slug;
-  return typeof slug === "string" && slug.trim() ? `/blog/${slug}` : "";
-}
-
 function limpiarNombreArchivo(name: string): string {
   return name
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9.\-_]/g, "-");
-}
-
-function normalizarIdLocal(value: string): string {
-  return value
-    .trim()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-zA-Z0-9_-]/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
 }
 </script>
 
@@ -1293,13 +881,6 @@ function normalizarIdLocal(value: string): string {
                 {{ selectedSchema ? valorPreviewRegistro(record, selectedSchema) : record.id }}
               </p>
               <p class="text-xs text-slate-500">ID: {{ record.id }}</p>
-              <RouterLink
-                v-if="selectedSchema?.id === 'blog' && blogPublicUrl(record)"
-                :to="blogPublicUrl(record)"
-                class="text-xs text-sky-700 hover:text-sky-800"
-              >
-                Ver público
-              </RouterLink>
             </div>
 
             <div v-if="selectedSchema?.storageType === 'document'" class="flex items-center gap-2">

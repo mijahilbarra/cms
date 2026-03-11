@@ -3,24 +3,8 @@ import path from "node:path";
 import { applicationDefault, cert, getApps, initializeApp } from "firebase-admin/app";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 
-const BLOG_SCHEMA_FALLBACK = {
-  id: "blog",
-  title: "Blog",
-  storageType: "document",
-  collectionName: "blogs",
-  slugFromField: "titulo",
-  previewField: "titulo",
-  fields: [
-    { key: "titulo", label: "Título", type: "text", required: true },
-    { key: "resumen", label: "Resumen", type: "textarea", required: true },
-    { key: "imagenPrincipalUrl", label: "Imagen principal", type: "image" },
-    { key: "contenidoHtml", label: "Contenido", type: "richtext", required: true },
-    { key: "publicado", label: "Publicado", type: "boolean" }
-  ]
-};
-
 const args = parseArgs(process.argv.slice(2));
-const envFile = args.envFile || "../pifWarriors/.env";
+const envFile = args.envFile || ".env";
 await loadEnvFileIfExists(envFile);
 
 const projectId = process.env.FIREBASE_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID;
@@ -34,7 +18,10 @@ if (!getApps().length) {
 }
 
 const db = getFirestore();
-const schemaId = (args.schemaId || "blog").trim();
+const schemaId = String(args.schemaId || "").trim();
+if (!schemaId && !args.schemaFile) {
+  throw new Error("Define --schema-id o --schema-file para indicar el esquema a usar.");
+}
 const schema = await resolveSchema(db, schemaId, args.schemaFile || "");
 
 const latestFixture = await resolveFixture(schema.id, args.fixture || "");
@@ -175,10 +162,6 @@ async function resolveSchema(dbRef, schemaIdValue, schemaFile) {
     return normalizeSchema({ id: snapshot.id, ...snapshot.data() });
   }
 
-  if (schemaIdValue === "blog") {
-    return BLOG_SCHEMA_FALLBACK;
-  }
-
   throw new Error(
     `No existe el schema \"${schemaIdValue}\" en cmsSchemas. Usa --schema-file para enviarlo.`
   );
@@ -228,17 +211,6 @@ async function safeReadDir(dirPath) {
 }
 
 function defaultFixtureData(schemaIdValue) {
-  if (schemaIdValue === "blog") {
-    return {
-      titulo: "Primer registro CMS dinámico: Blog",
-      resumen: "Registro semilla generado desde schema dinámico de tipo document.",
-      imagenPrincipalUrl: "",
-      contenidoHtml:
-        "<h2>Primer contenido</h2><p>Este artículo fue creado desde el sistema dinámico por schema.</p>",
-      publicado: true
-    };
-  }
-
   return {};
 }
 

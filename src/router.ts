@@ -80,8 +80,8 @@ export function createCmsRoutes(
       component: AdminLayoutPage,
       meta: { cmsRequiresAuth: true },
       children: [
-        { path: "", redirect: `${safeBase}/blog` },
-        { path: "blog", component: AdminBlogPage, meta: { cmsRequiresAuth: true } },
+        { path: "", redirect: `${safeBase}/content` },
+        { path: "content", component: AdminBlogPage, meta: { cmsRequiresAuth: true } },
         { path: "schemas", component: AdminSchemasPage, meta: { cmsRequiresAuth: true } },
         { path: "users", component: AdminUsersPage, meta: { cmsRequiresAuth: true } }
       ]

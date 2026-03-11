@@ -4,7 +4,7 @@ import { applicationDefault, cert, getApps, initializeApp } from "firebase-admin
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 
 const args = parseArgs(process.argv.slice(2));
-const envFile = args.envFile || "../pifWarriors/.env";
+const envFile = args.envFile || ".env";
 const dryRun = normalizeBoolean(args.dryRun || "false");
 await loadEnvFileIfExists(envFile);
 

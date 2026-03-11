@@ -20,7 +20,6 @@
     "build": "npm run type-check && vite build && cp src/public-types.d.ts dist/index.d.ts",
     "type-check": "vue-tsc --noEmit",
     "seed:content": "node scripts/seed-content-from-schema.mjs",
-    "migrate:views-dictionary": "node scripts/migrate-views-dictionary-structure.mjs",
     "migrate:complex-string-fields": "node scripts/migrate-stringified-complex-fields.mjs",
     "prepare": "npm run build"
   },

@@ -31,7 +31,7 @@ onBeforeUnmount(() => {
 watch(
   () => route.fullPath,
   () => {
-    if (route.path.startsWith(`${basePath}/blog`)) {
+    if (route.path.startsWith(`${basePath}/content`)) {
       contenidoExpandido.value = true;
       void cargarSchemasContenido();
     }
@@ -54,7 +54,7 @@ async function cargarSchemasContenido(): Promise<void> {
   }
 }
 
-const isContenidoRoute = computed(() => route.path.startsWith(`${basePath}/blog`));
+const isContenidoRoute = computed(() => route.path.startsWith(`${basePath}/content`));
 const isEsquemasRoute = computed(() => route.path.startsWith(`${basePath}/schemas`));
 const schemasDocumento = computed(() => schemasContenido.value.filter((schema) => schema.storageType === "document"));
 const schemasDiccionario = computed(() => schemasContenido.value.filter((schema) => schema.storageType === "dictionary"));
@@ -69,7 +69,7 @@ function handleSchemasUpdated(): void {
 
 function toContenidoLink(schemaId: string): { path: string; query: Record<string, string> } {
   return {
-    path: `${basePath}/blog`,
+    path: `${basePath}/content`,
     query: { schema: schemaId }
   };
 }
@@ -155,7 +155,7 @@ const tituloPanel = computed(() => {
 });
 
 const tituloSeccion = computed(() => {
-  if (route.path.startsWith(`${basePath}/blog`)) {
+  if (route.path.startsWith(`${basePath}/content`)) {
     const currentSchema = typeof route.query.schema === "string" ? route.query.schema : "";
     const selected =
       schemasContenido.value.find((schema) => schema.id === currentSchema) ?? schemasContenido.value[0] ?? null;
@@ -217,7 +217,7 @@ const tituloSeccion = computed(() => {
       <div class="cms-sidebar-scroll space-y-2">
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-slate-800 transition hover:bg-white">
               <div class="flex items-start justify-between gap-2">
-                <RouterLink :to="`${basePath}/blog`" class="min-w-0 flex-1">
+                <RouterLink :to="`${basePath}/content`" class="min-w-0 flex-1">
                   <p class="text-sm font-black">Contenido</p>
                   <p class="text-xs text-slate-500">
                     Formularios y registros

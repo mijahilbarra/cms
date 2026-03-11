@@ -11,7 +11,7 @@ const props = withDefaults(
     disabled?: boolean;
   }>(),
   {
-    placeholder: "Escribe aquí el contenido del blog...",
+    placeholder: "Escribe aquí el contenido...",
     disabled: false
   }
 );

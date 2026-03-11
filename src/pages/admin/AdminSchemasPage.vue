@@ -2,11 +2,7 @@
 import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import CmsSchemaFieldEditor from "../../components/admin/CmsSchemaFieldEditor.vue";
-import {
-  ensureDefaultSchemas,
-  guardarSchemaContenido,
-  listarSchemasContenido
-} from "../../services/contentSchemaService";
+import { guardarSchemaContenido, listarSchemasContenido } from "../../services/contentSchemaService";
 import type { CmsContentSchema, CmsFieldSchema, CmsNestedFieldSchema } from "../../types/contentSchema";
 
 type SchemaDraft = {
@@ -29,6 +25,7 @@ const selectedSchemaId = ref("");
 const cargando = ref(false);
 const guardandoEdicion = ref(false);
 const schemaDraft = ref<SchemaDraft | null>(null);
+const editandoNuevoSchema = ref(false);
 const error = ref("");
 const errorEdicion = ref("");
 const mensajeEdicion = ref("");
@@ -61,7 +58,14 @@ watch(
   (schema) => {
     errorEdicion.value = "";
     mensajeEdicion.value = "";
-    schemaDraft.value = schema ? crearDraftDesdeSchema(schema) : null;
+    if (schema) {
+      editandoNuevoSchema.value = false;
+      schemaDraft.value = crearDraftDesdeSchema(schema);
+      return;
+    }
+    if (!editandoNuevoSchema.value) {
+      schemaDraft.value = null;
+    }
   },
   { immediate: true }
 );
@@ -71,16 +75,14 @@ async function cargarSchemas(): Promise<void> {
   error.value = "";
 
   try {
-    let encontrados = await listarSchemasContenido();
-    if (!encontrados.length) {
-      await ensureDefaultSchemas();
-      encontrados = await listarSchemasContenido();
-    }
-
+    const encontrados = await listarSchemasContenido();
     schemas.value = encontrados;
     sincronizarSeleccion(encontrados);
     if (selectedSchemaId.value) {
       await actualizarRutaSchema(selectedSchemaId.value);
+    } else if (!schemaDraft.value) {
+      editandoNuevoSchema.value = true;
+      schemaDraft.value = crearDraftVacio();
     }
   } catch {
     error.value = "No se pudieron cargar los esquemas.";
@@ -183,6 +185,33 @@ function crearDraftDesdeSchema(schema: CmsContentSchema): SchemaDraft {
   };
 }
 
+function crearDraftVacio(): SchemaDraft {
+  return {
+    id: "",
+    title: "",
+    description: "",
+    storageType: "document",
+    collectionName: "",
+    dictionaryDocumentId: "",
+    dictionaryRootKey: "",
+    slugFromField: "",
+    previewField: "",
+    fields: [crearCampoVacio()]
+  };
+}
+
+async function crearNuevoSchema(): Promise<void> {
+  editandoNuevoSchema.value = true;
+  selectedSchemaId.value = "";
+  schemaDraft.value = crearDraftVacio();
+  errorEdicion.value = "";
+  mensajeEdicion.value = "";
+
+  const query = { ...route.query };
+  delete query.schema;
+  await router.replace({ query });
+}
+
 function updateMetaField(field: keyof Omit<SchemaDraft, "fields">, value: string): void {
   if (!schemaDraft.value) {
     return;
@@ -242,7 +271,7 @@ function validarCampo(field: CmsFieldSchema, contexto: string): void {
 }
 
 async function guardarEdicion(): Promise<void> {
-  if (!selectedSchema.value || !schemaDraft.value) {
+  if (!schemaDraft.value) {
     return;
   }
 
@@ -282,6 +311,7 @@ async function guardarEdicion(): Promise<void> {
     await guardarSchemaContenido(payload);
     await cargarSchemas();
     selectedSchemaId.value = payload.id;
+    editandoNuevoSchema.value = false;
     await actualizarRutaSchema(payload.id);
     window.dispatchEvent(new Event("cms-schemas-updated"));
 
@@ -306,13 +336,22 @@ async function guardarEdicion(): Promise<void> {
             Edición visual de campos. Los tipos <strong>map</strong> y <strong>array</strong> se editan por interfaz.
           </p>
         </div>
-        <button
-          type="button"
-          class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-          @click="cargarSchemas"
-        >
-          Recargar
-        </button>
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            @click="crearNuevoSchema"
+          >
+            Nuevo esquema
+          </button>
+          <button
+            type="button"
+            class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            @click="cargarSchemas"
+          >
+            Recargar
+          </button>
+        </div>
       </div>
     </article>
 
@@ -324,14 +363,14 @@ async function guardarEdicion(): Promise<void> {
     </p>
 
     <p v-if="cargando" class="text-sm text-slate-500">Cargando esquemas...</p>
-    <p v-else-if="!selectedSchema || !schemaDraft" class="text-sm text-slate-500">No hay esquema seleccionado.</p>
+    <p v-else-if="!schemaDraft" class="text-sm text-slate-500">No hay esquema seleccionado.</p>
 
     <article v-else class="rounded-2xl border border-slate-200 bg-white p-5">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h4 class="text-lg font-black text-slate-900">{{ schemaDraft.title || selectedSchema.title }}</h4>
+          <h4 class="text-lg font-black text-slate-900">{{ schemaDraft.title || selectedSchema?.title || "Nuevo esquema" }}</h4>
           <p class="text-xs text-slate-500">
-            ID: <code>{{ selectedSchema.id }}</code>
+            ID: <code>{{ selectedSchema?.id || "nuevo" }}</code>
           </p>
         </div>
         <button
