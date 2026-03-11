@@ -50,6 +50,9 @@ function defaultValueForSchema(schema: CmsNestedFieldSchema): unknown {
   if (schema.type === "boolean") {
     return false;
   }
+  if (schema.type === "numeric" || schema.type === "id") {
+    return null;
+  }
   return "";
 }
 
@@ -82,6 +85,33 @@ function onPrimitiveInput(value: string): void {
 
 function onBooleanInput(value: boolean): void {
   emit("update:modelValue", value);
+}
+
+function onNumericInput(raw: string): void {
+  if (!raw.trim()) {
+    emit("update:modelValue", null);
+    return;
+  }
+
+  const parsed = Number(raw);
+  emit("update:modelValue", Number.isFinite(parsed) ? parsed : null);
+}
+
+function numericInputValue(value: unknown): string {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value);
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return "";
+    }
+    const parsed = Number(trimmed);
+    if (Number.isFinite(parsed)) {
+      return String(parsed);
+    }
+  }
+  return "";
 }
 
 function addMapEntry(): void {
@@ -291,6 +321,17 @@ function parseDynamicInput(raw: string): unknown {
       <option value="">Selecciona una opción</option>
       <option v-for="option in schema.options || []" :key="option" :value="option">{{ option }}</option>
     </select>
+
+    <input
+      v-else-if="schema.type === 'numeric' || schema.type === 'id'"
+      :value="numericInputValue(modelValue)"
+      type="number"
+      :step="schema.type === 'id' ? '1' : 'any'"
+      :placeholder="schema.placeholder || ''"
+      :disabled="disabled"
+      class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500 disabled:bg-slate-100"
+      @input="onNumericInput(($event.target as HTMLInputElement).value)"
+    />
 
     <input
       v-else

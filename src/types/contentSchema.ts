@@ -2,6 +2,8 @@ export type CmsStorageType = "document" | "dictionary";
 
 export type CmsFieldType =
   | "text"
+  | "numeric"
+  | "id"
   | "textarea"
   | "richtext"
   | "image"

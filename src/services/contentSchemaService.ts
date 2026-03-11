@@ -199,6 +199,8 @@ function normalizarNestedCampo(input: Partial<CmsNestedFieldSchema>): CmsNestedF
 
 function resolveFieldType(value: unknown): CmsFieldType {
   if (
+    value === "numeric" ||
+    value === "id" ||
     value === "textarea" ||
     value === "richtext" ||
     value === "image" ||

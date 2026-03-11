@@ -170,6 +170,8 @@ function inicializarFormularioRegistro(schema: CmsContentSchema): void {
       values[field.key] = [];
     } else if (field.type === "map") {
       values[field.key] = {};
+    } else if (field.type === "numeric" || field.type === "id") {
+      values[field.key] = null;
     } else if (field.type === "document") {
       values[field.key] = "";
     } else {
@@ -288,6 +290,10 @@ function hidratarFormularioDesdeRegistro(
       nextValues[field.key] = Boolean(value);
     } else if (field.type === "array" || field.type === "map") {
       nextValues[field.key] = parsearValorComplejo(field, value);
+    } else if (field.type === "numeric") {
+      nextValues[field.key] = normalizarNumeroEntrada(value);
+    } else if (field.type === "id") {
+      nextValues[field.key] = normalizarIdEntrada(value);
     } else if (field.type === "document") {
       nextValues[field.key] = typeof value === "string" ? value : "";
     } else if (typeof value === "string") {
@@ -341,7 +347,7 @@ async function guardarRegistro(): Promise<void> {
 
     for (const field of schema.fields) {
       payload[field.key] = await resolverValorCampo(schema, field);
-      validarCampoRequerido(field, payload[field.key]);
+      validarCampoRequerido(schema, field, payload[field.key]);
     }
 
     if (schema.slugFromField) {
@@ -403,6 +409,17 @@ async function resolverValorCampo(
     return parsearValorComplejo(field, formValues.value[field.key]);
   }
 
+  if (field.type === "numeric") {
+    return valorNumero(field.key);
+  }
+
+  if (field.type === "id") {
+    if (schema.storageType === "document" && !registroEditandoId.value) {
+      return null;
+    }
+    return normalizarIdEntrada(formValues.value[field.key]);
+  }
+
   if (field.type === "document") {
     return valorTexto(field.key);
   }
@@ -410,7 +427,7 @@ async function resolverValorCampo(
   return valorTexto(field.key);
 }
 
-function validarCampoRequerido(field: CmsFieldSchema, value: unknown): void {
+function validarCampoRequerido(schema: CmsContentSchema, field: CmsFieldSchema, value: unknown): void {
   if (!field.required) {
     return;
   }
@@ -429,6 +446,24 @@ function validarCampoRequerido(field: CmsFieldSchema, value: unknown): void {
   if (field.type === "map") {
     if (!esRegistro(value) || Object.keys(value).length === 0) {
       throw new Error(`El campo \"${field.label}\" es obligatorio y debe tener al menos 1 propiedad.`);
+    }
+    return;
+  }
+
+  if (field.type === "id" && schema.storageType === "document" && !registroEditandoId.value) {
+    return;
+  }
+
+  if (field.type === "numeric") {
+    if (typeof value !== "number" || !Number.isFinite(value)) {
+      throw new Error(`El campo \"${field.label}\" es obligatorio y debe ser numérico.`);
+    }
+    return;
+  }
+
+  if (field.type === "id") {
+    if (typeof value !== "number" || !Number.isInteger(value) || value < 1) {
+      throw new Error(`El campo \"${field.label}\" es obligatorio y debe ser un entero mayor o igual a 1.`);
     }
     return;
   }
@@ -533,6 +568,20 @@ function normalizarValorContraNodo(
     return value;
   }
 
+  if (schema.type === "numeric") {
+    if (typeof value !== "number" || !Number.isFinite(value)) {
+      throw new Error(`\"${contexto}\" debe ser numérico.`);
+    }
+    return value;
+  }
+
+  if (schema.type === "id") {
+    if (typeof value !== "number" || !Number.isInteger(value) || value < 1) {
+      throw new Error(`\"${contexto}\" debe ser un número entero mayor o igual a 1.`);
+    }
+    return value;
+  }
+
   if (typeof value !== "string") {
     throw new Error(`\"${contexto}\" debe ser string.`);
   }
@@ -587,8 +636,21 @@ function valorTexto(key: string): string {
   return typeof value === "string" ? value : "";
 }
 
+function valorNumero(key: string): number | null {
+  return normalizarNumeroEntrada(formValues.value[key]);
+}
+
+function valorNumeroInput(key: string): string {
+  const value = valorNumero(key);
+  return typeof value === "number" ? String(value) : "";
+}
+
 function setTexto(key: string, value: string): void {
   formValues.value[key] = value;
+}
+
+function setNumero(key: string, raw: string): void {
+  formValues.value[key] = normalizarNumeroEntrada(raw);
 }
 
 function opcionesDocumento(field: CmsFieldSchema): DocumentRelationOption[] {
@@ -646,6 +708,10 @@ function valorPreviewRegistro(record: DynamicDocumentRecord, schema: CmsContentS
     return value ? "true" : "false";
   }
 
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value);
+  }
+
   if (Array.isArray(value)) {
     return `[array:${value.length}]`;
   }
@@ -663,6 +729,36 @@ function limpiarNombreArchivo(name: string): string {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9.\-_]/g, "-");
+}
+
+function normalizarNumeroEntrada(value: unknown): number | null {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function normalizarIdEntrada(value: unknown): number | null {
+  const parsed = normalizarNumeroEntrada(value);
+  if (parsed === null) {
+    return null;
+  }
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    return null;
+  }
+  return parsed;
+}
+
+function esCampoIdAutonumerico(field: CmsFieldSchema): boolean {
+  return field.type === "id" && selectedSchema.value?.storageType === "document";
 }
 </script>
 
@@ -705,6 +801,22 @@ function limpiarNombreArchivo(name: string): string {
             class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500 disabled:bg-slate-100"
             @input="setTexto(field.key, ($event.target as HTMLInputElement).value)"
           />
+
+          <div v-else-if="field.type === 'numeric' || field.type === 'id'" class="space-y-1">
+            <input
+              :value="valorNumeroInput(field.key)"
+              type="number"
+              :step="field.type === 'id' ? '1' : 'any'"
+              :min="field.type === 'id' ? 1 : undefined"
+              :placeholder="field.placeholder || ''"
+              :disabled="!puedeEditarContenido || esCampoIdAutonumerico(field)"
+              class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500 disabled:bg-slate-100"
+              @input="setNumero(field.key, ($event.target as HTMLInputElement).value)"
+            />
+            <p v-if="esCampoIdAutonumerico(field)" class="text-xs text-slate-500">
+              Se genera automáticamente al crear el documento.
+            </p>
+          </div>
 
           <textarea
             v-else-if="field.type === 'textarea'"

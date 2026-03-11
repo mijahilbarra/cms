@@ -7,6 +7,8 @@ type EditableSchemaNode = CmsNestedFieldSchema & Partial<Pick<CmsFieldSchema, "k
 
 const FIELD_TYPE_OPTIONS: Array<{ label: string; value: CmsFieldType }> = [
   { label: "Texto", value: "text" },
+  { label: "Numérico", value: "numeric" },
+  { label: "ID autonumérico", value: "id" },
   { label: "Textarea", value: "textarea" },
   { label: "Editor enriquecido", value: "richtext" },
   { label: "Imagen", value: "image" },
@@ -44,6 +46,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function resolveFieldType(value: unknown): CmsFieldType {
   if (
+    value === "numeric" ||
+    value === "id" ||
     value === "textarea" ||
     value === "richtext" ||
     value === "image" ||
