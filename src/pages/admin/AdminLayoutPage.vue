@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch, type CSSProperties } from "vue";
 import { RouterLink, RouterView, useRoute, useRouter } from "vue-router";
 import { cerrarSesion, usuarioActual } from "../../firebase/auth";
 import { getCmsFirebaseServices } from "../../firebase/context";
@@ -17,21 +17,24 @@ const contenidoExpandido = ref(true);
 const esquemasExpandido = ref(true);
 const panelAbierto = ref(true);
 const modoDesarrollador = ref(false);
+const esPantallaGrande = ref(false);
 
 onMounted(async () => {
  await cargarSchemasContenido();
- if (typeof window !== "undefined" && window.innerWidth < 1024) {
- panelAbierto.value = false;
- }
+ actualizarEstadoPantalla();
  if (typeof window !== "undefined") {
  modoDesarrollador.value = window.localStorage.getItem(DEVELOPER_MODE_STORAGE_KEY) === "true";
  void asegurarRutaVisible();
+ window.addEventListener("resize", actualizarEstadoPantalla);
  }
  window.addEventListener("cms-schemas-updated", handleSchemasUpdated);
 });
 
 onBeforeUnmount(() => {
  window.removeEventListener("cms-schemas-updated", handleSchemasUpdated);
+ if (typeof window !== "undefined") {
+ window.removeEventListener("resize", actualizarEstadoPantalla);
+ }
 });
 
 watch(
@@ -45,9 +48,7 @@ watch(
  esquemasExpandido.value = true;
  void cargarSchemasContenido();
  }
- if (typeof window !== "undefined" && window.innerWidth < 1024) {
- panelAbierto.value = false;
- }
+ actualizarEstadoPantalla();
  void asegurarRutaVisible();
  }
 );
@@ -137,6 +138,16 @@ function cerrarPanel(): void {
  panelAbierto.value = false;
 }
 
+function actualizarEstadoPantalla(): void {
+ if (typeof window === "undefined") {
+ return;
+ }
+ esPantallaGrande.value = window.innerWidth >= 1024;
+ if (!esPantallaGrande.value) {
+ panelAbierto.value = false;
+ }
+}
+
 async function asegurarRutaVisible(): Promise<void> {
  if (modoDesarrollador.value) {
  return;
@@ -202,10 +213,35 @@ const tituloSeccion = computed(() => {
  }
  return "Dashboard";
 });
+
+const rootStyle = computed<CSSProperties>(() => ({
+ height: "100dvh",
+ minHeight: "100dvh",
+ overflow: "hidden"
+}));
+
+const sidebarStyle = computed<CSSProperties>(() => ({
+ height: "100dvh",
+ maxHeight: "100dvh",
+ overflow: "hidden",
+ display: "flex",
+ minHeight: "0",
+ flexDirection: "column",
+ padding: "0",
+ transform: panelAbierto.value ? "translateX(0)" : "translateX(-100%)",
+ transition: "transform 200ms ease-in-out"
+}));
+
+const contentStyle = computed<CSSProperties>(() => ({
+ height: "100%",
+ overflowY: "auto",
+ transition: "padding-left 200ms ease-in-out",
+ paddingLeft: panelAbierto.value && esPantallaGrande.value ? "360px" : "0px"
+}));
 </script>
 
 <template>
- <main class="cms-root-fixed-height overflow-hidden ">
+ <main class="overflow-hidden" :style="rootStyle">
  <button
  v-if="!panelAbierto"
  type="button"
@@ -223,10 +259,10 @@ const tituloSeccion = computed(() => {
  ></div>
 
  <aside
- class="cms-sidebar-panel cms-sidebar-fixed-height fixed inset-y-0 left-0 z-40 w-80 border-r shadow-xl transition-transform duration-200"
- :class="panelAbierto ? 'cms-sidebar-open' : 'cms-sidebar-closed'"
+ class="fixed inset-y-0 left-0 z-40 w-80 border-r shadow-xl"
+ :style="sidebarStyle"
  >
- <div class="cms-sidebar-header mb-3 flex items-center justify-between lg:mb-0">
+ <div class="mb-3 flex items-center justify-between p-3 lg:mb-0">
  <h2 class="text-sm font-black uppercase tracking-wide ">{{ tituloPanel }}</h2>
  <div class="flex items-center gap-2">
  <button
@@ -262,7 +298,7 @@ const tituloSeccion = computed(() => {
  </span>
  </button>
  </div>
- <div class="cms-sidebar-scroll space-y-2">
+ <div class="mt-3 flex-1 min-h-0 space-y-2 overflow-y-auto">
  <div class="rounded-xl border p-3 transition ">
  <div class="flex items-start justify-between gap-2">
  <RouterLink :to="`${basePath}/content`" class="min-w-0 flex-1">
@@ -403,7 +439,7 @@ const tituloSeccion = computed(() => {
  </RouterLink>
  </div>
 
- <div class="cms-sidebar-footer">
+ <div class="mt-3 border-t pt-3">
  <div class="flex items-center gap-2 rounded-xl border p-2">
  <button
  type="button"
@@ -425,8 +461,8 @@ const tituloSeccion = computed(() => {
  </aside>
 
  <section
- class="cms-content-fixed-height min-w-0 h-full overflow-y-auto px-5 py-16 transition-all duration-200 lg:px-8 lg:py-8"
- :class="panelAbierto ? 'cms-content-with-open-sidebar' : ''"
+ class="min-w-0 h-full overflow-y-auto px-5 py-16 transition-all duration-200 lg:px-8 lg:py-8"
+ :style="contentStyle"
  >
  <div class="mx-auto w-full max-w-7xl space-y-6">
  <section>
@@ -446,77 +482,3 @@ const tituloSeccion = computed(() => {
  </section>
  </main>
 </template>
-
-<style scoped>
-@import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0,0");
-
-.material-symbols-outlined {
- font-variation-settings:
- "FILL" 0,
- "wght" 400,
- "GRAD" 0,
- "opsz" 24;
-}
-
-.cms-root-fixed-height {
- height: 100vh;
- height: 100dvh;
- min-height: 100vh;
- min-height: 100dvh;
- overflow: hidden;
-}
-
-.cms-sidebar-fixed-height {
- height: 100vh;
- height: 100dvh;
- max-height: 100vh;
- max-height: 100dvh;
- overflow: hidden;
-}
-
-.cms-sidebar-panel {
- display: flex;
- min-height: 0;
- flex-direction: column;
- padding: 0 !important;
- transform: translateX(-100%);
- transition: transform 200ms ease-in-out;
-}
-
-.cms-sidebar-open {
- transform: translateX(0);
-}
-
-.cms-sidebar-closed {
- transform: translateX(-100%);
-}
-
-.cms-content-fixed-height {
- height: 100%;
- overflow-y: auto;
- transition: padding-left 200ms ease-in-out;
-}
-
-@media (min-width: 1024px) {
- .cms-content-with-open-sidebar {
- padding-left: 360px;
- }
-}
-
-.cms-sidebar-scroll {
- margin-top: 0.75rem;
- flex: 1;
- min-height: 0;
- overflow-y: auto;
-}
-
-.cms-sidebar-header {
- padding: 0.75rem;
-}
-
-.cms-sidebar-footer {
- margin-top: 0.75rem;
- border-top: 1px solid rgb(226 232 240);
- padding-top: 0.75rem;
-}
-</style>
