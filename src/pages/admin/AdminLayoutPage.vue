@@ -10,16 +10,22 @@ import type { CmsContentSchema } from "../../types/contentSchema";
 const route = useRoute();
 const router = useRouter();
 const { basePath, loginPath, homePath } = getCmsRouteConfig();
+const DEVELOPER_MODE_STORAGE_KEY = "cms-developer-mode";
 const schemasContenido = ref<CmsContentSchema[]>([]);
 const cargandoSchemasContenido = ref(false);
 const contenidoExpandido = ref(true);
 const esquemasExpandido = ref(true);
 const panelAbierto = ref(true);
+const modoDesarrollador = ref(false);
 
 onMounted(async () => {
   await cargarSchemasContenido();
   if (typeof window !== "undefined" && window.innerWidth < 1024) {
     panelAbierto.value = false;
+  }
+  if (typeof window !== "undefined") {
+    modoDesarrollador.value = window.localStorage.getItem(DEVELOPER_MODE_STORAGE_KEY) === "true";
+    void asegurarRutaVisible();
   }
   window.addEventListener("cms-schemas-updated", handleSchemasUpdated);
 });
@@ -42,8 +48,16 @@ watch(
     if (typeof window !== "undefined" && window.innerWidth < 1024) {
       panelAbierto.value = false;
     }
+    void asegurarRutaVisible();
   }
 );
+
+watch(modoDesarrollador, (value) => {
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(DEVELOPER_MODE_STORAGE_KEY, value ? "true" : "false");
+  }
+  void asegurarRutaVisible();
+});
 
 async function cargarSchemasContenido(): Promise<void> {
   cargandoSchemasContenido.value = true;
@@ -115,8 +129,21 @@ function togglePanel(): void {
   panelAbierto.value = !panelAbierto.value;
 }
 
+function toggleModoDesarrollador(): void {
+  modoDesarrollador.value = !modoDesarrollador.value;
+}
+
 function cerrarPanel(): void {
   panelAbierto.value = false;
+}
+
+async function asegurarRutaVisible(): Promise<void> {
+  if (modoDesarrollador.value) {
+    return;
+  }
+  if (route.path.startsWith(`${basePath}/schemas`) || route.path.startsWith(`${basePath}/users`)) {
+    await router.replace(`${basePath}/content`);
+  }
 }
 
 function esRutaExterna(path: string): boolean {
@@ -162,9 +189,15 @@ const tituloSeccion = computed(() => {
     return selected ? `Contenido · ${selected.title}` : "Contenido";
   }
   if (route.path.startsWith(`${basePath}/schemas`)) {
+    if (!modoDesarrollador.value) {
+      return "Contenido";
+    }
     return "Esquemas";
   }
   if (route.path.startsWith(`${basePath}/users`)) {
+    if (!modoDesarrollador.value) {
+      return "Contenido";
+    }
     return "Usuarios";
   }
   return "Dashboard";
@@ -213,6 +246,21 @@ const tituloSeccion = computed(() => {
             <span class="material-symbols-outlined text-lg">left_panel_close</span>
           </button>
         </div>
+      </div>
+      <div class="px-3">
+        <button
+          type="button"
+          class="mb-2 flex w-full items-center justify-between rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+          @click="toggleModoDesarrollador"
+        >
+          <span>Modo desarrollador</span>
+          <span
+            class="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
+            :class="modoDesarrollador ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'"
+          >
+            {{ modoDesarrollador ? "Activo" : "Oculto" }}
+          </span>
+        </button>
       </div>
       <div class="cms-sidebar-scroll space-y-2">
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-slate-800 transition hover:bg-white">
@@ -288,7 +336,10 @@ const tituloSeccion = computed(() => {
           </RouterLink>
         </div>
 
-        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-slate-800 transition hover:bg-white">
+        <div
+          v-if="modoDesarrollador"
+          class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-slate-800 transition hover:bg-white"
+        >
               <div class="flex items-start justify-between gap-2">
                 <RouterLink :to="`${basePath}/schemas`" class="min-w-0 flex-1">
                   <p class="text-sm font-black">Esquemas</p>
@@ -336,6 +387,7 @@ const tituloSeccion = computed(() => {
         </div>
 
         <RouterLink
+          v-if="modoDesarrollador"
           :to="`${basePath}/users`"
           class="block rounded-xl border p-3 transition"
           :class="
@@ -466,24 +518,5 @@ const tituloSeccion = computed(() => {
   margin-top: 0.75rem;
   border-top: 1px solid rgb(226 232 240);
   padding-top: 0.75rem;
-}
-
-/* Sidebar plano: sin bordes ni esquinas redondeadas en todos sus bloques */
-.cms-sidebar-panel,
-.cms-sidebar-panel * {
-  border-radius: 0 !important;
-}
-
-.cms-sidebar-panel {
-  border-right-width: 0 !important;
-}
-
-.cms-sidebar-panel * {
-  border-width: 0 !important;
-  border-color: transparent !important;
-}
-
-.cms-sidebar-footer {
-  border-top-width: 0 !important;
 }
 </style>

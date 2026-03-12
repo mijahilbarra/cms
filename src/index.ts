@@ -1,3 +1,4 @@
+import "./styles/tailwind.css";
 import "./styles/cms-static.css";
 
 export { registerPifWarriorsCms, createCmsRoutes } from "./router";

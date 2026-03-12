@@ -315,7 +315,7 @@ function formatDateAsInput(date: Date): string {
           :disabled="disabled"
           @click="addMapEntry"
         >
-          Agregar propiedad
+          Agregar item
         </button>
         <p class="text-xs text-slate-500">
           Puedes escribir JSON en el valor para guardar objetos o arreglos.
