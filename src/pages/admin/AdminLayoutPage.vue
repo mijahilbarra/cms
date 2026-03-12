@@ -19,6 +19,14 @@ const panelAbierto = ref(true);
 const modoDesarrollador = ref(false);
 const esPantallaGrande = ref(false);
 
+const cmsBg = "var(--cms-bg, #f3f4f6)";
+const cmsSurface = "var(--cms-surface, #ffffff)";
+const cmsBorder = "var(--cms-border, #d1d5db)";
+const cmsText = "var(--cms-text, #111827)";
+const cmsMuted = "var(--cms-muted, #6b7280)";
+const cmsPrimary = "var(--cms-primary, #111827)";
+const cmsPrimaryText = "var(--cms-primary-text, #ffffff)";
+
 onMounted(async () => {
  await cargarSchemasContenido();
  actualizarEstadoPantalla();
@@ -217,7 +225,31 @@ const tituloSeccion = computed(() => {
 const rootStyle = computed<CSSProperties>(() => ({
  height: "100dvh",
  minHeight: "100dvh",
- overflow: "hidden"
+ overflow: "hidden",
+ backgroundColor: cmsBg,
+ color: cmsText
+}));
+
+const openSidebarButtonStyle = computed<CSSProperties>(() => ({
+ position: "fixed",
+ left: "0",
+ top: "50%",
+ transform: "translateY(-50%)",
+ zIndex: "50",
+ border: `1px solid ${cmsBorder}`,
+ borderLeft: "0",
+ borderRadius: "0 10px 10px 0",
+ backgroundColor: cmsSurface,
+ color: cmsText,
+ padding: "10px 8px",
+ boxShadow: "0 8px 24px rgba(0,0,0,0.18)"
+}));
+
+const overlayStyle = computed<CSSProperties>(() => ({
+ position: "fixed",
+ inset: "0",
+ zIndex: "30",
+ backgroundColor: "rgba(17,24,39,0.30)"
 }));
 
 const sidebarStyle = computed<CSSProperties>(() => ({
@@ -228,47 +260,122 @@ const sidebarStyle = computed<CSSProperties>(() => ({
  minHeight: "0",
  flexDirection: "column",
  padding: "0",
- transform: panelAbierto.value ? "translateX(0)" : "translateX(-100%)",
- transition: "transform 200ms ease-in-out"
+ backgroundColor: cmsSurface,
+ color: cmsText,
+ borderRight: `1px solid ${cmsBorder}`,
+ boxShadow: "0 10px 30px rgba(0,0,0,0.16)"
 }));
 
 const contentStyle = computed<CSSProperties>(() => ({
  height: "100%",
  overflowY: "auto",
  transition: "padding-left 200ms ease-in-out",
- paddingLeft: panelAbierto.value && esPantallaGrande.value ? "360px" : "0px"
+  paddingLeft: panelAbierto.value && esPantallaGrande.value ? "360px" : "0px"
 }));
+
+const iconButtonStyle: CSSProperties = {
+ border: `1px solid ${cmsBorder}`,
+ borderRadius: "8px",
+ backgroundColor: cmsSurface,
+ color: cmsText,
+ padding: "4px 8px"
+};
+
+const blockButtonStyle: CSSProperties = {
+ width: "100%",
+ display: "flex",
+ alignItems: "center",
+ justifyContent: "space-between",
+ border: `1px solid ${cmsBorder}`,
+ borderRadius: "10px",
+ backgroundColor: cmsSurface,
+ color: cmsText,
+ padding: "8px 12px",
+ fontSize: "12px",
+ fontWeight: "600"
+};
+
+const navCardStyle: CSSProperties = {
+ border: `1px solid ${cmsBorder}`,
+ borderRadius: "12px",
+ padding: "12px"
+};
+
+const headerRowStyle: CSSProperties = {
+ display: "flex",
+ alignItems: "flex-start",
+ justifyContent: "space-between",
+ gap: "8px"
+};
+
+const footerStyle: CSSProperties = {
+ marginTop: "12px",
+ borderTop: `1px solid ${cmsBorder}`,
+ paddingTop: "12px"
+};
+
+function estadoBadgeStyle(activo: boolean): CSSProperties {
+ return {
+ borderRadius: "999px",
+ padding: "2px 8px",
+ fontSize: "10px",
+ fontWeight: "700",
+ textTransform: "uppercase",
+ backgroundColor: activo ? "rgba(16,185,129,0.18)" : "rgba(107,114,128,0.16)",
+ color: activo ? "#047857" : cmsMuted
+ };
+}
+
+function navItemStyle(activo: boolean): CSSProperties {
+ return {
+ display: "block",
+ border: `1px solid ${activo ? cmsPrimary : cmsBorder}`,
+ borderRadius: "10px",
+ padding: "6px 8px",
+ fontSize: "12px",
+ textDecoration: "none",
+ backgroundColor: activo ? cmsPrimary : "transparent",
+ color: activo ? cmsPrimaryText : cmsText
+ };
+}
+
+function navMetaStyle(activo: boolean): CSSProperties {
+ return {
+ color: activo ? "rgba(255,255,255,0.82)" : cmsMuted
+ };
+}
 </script>
 
 <template>
  <main class="overflow-hidden" :style="rootStyle">
  <button
  v-if="!panelAbierto"
- type="button"
- aria-label="Abrir sidebar"
- class="fixed left-0 top-1/2 z-50 -translate-y-1/2 rounded-r-lg border border-l-0 px-2 py-3 shadow-lg "
- @click="togglePanel"
+  type="button"
+  aria-label="Abrir sidebar"
+ :style="openSidebarButtonStyle"
+  @click="togglePanel"
  >
  <span class="material-symbols-outlined text-lg">left_panel_open</span>
  </button>
 
  <div
- v-if="panelAbierto"
- class="fixed inset-0 z-30 lg:hidden"
- @click="cerrarPanel"
+ v-if="panelAbierto && !esPantallaGrande"
+ :style="overlayStyle"
+  @click="cerrarPanel"
  ></div>
 
  <aside
+ v-show="panelAbierto"
  class="fixed inset-y-0 left-0 z-40 w-80 border-r shadow-xl"
  :style="sidebarStyle"
  >
- <div class="mb-3 flex items-center justify-between p-3 lg:mb-0">
- <h2 class="text-sm font-black uppercase tracking-wide ">{{ tituloPanel }}</h2>
- <div class="flex items-center gap-2">
+ <div class="mb-3 p-3 lg:mb-0" :style="{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }">
+ <h2 class="text-sm font-black uppercase tracking-wide" :style="{ color: cmsText }">{{ tituloPanel }}</h2>
+ <div class="flex items-center gap-2" :style="{ display: 'flex', alignItems: 'center', gap: '8px' }">
  <button
  type="button"
  aria-label="Ir a inicio"
- class="rounded-md border px-2 py-1 "
+ :style="iconButtonStyle"
  @click="irAInicio"
  >
  <span class="material-symbols-outlined text-lg">home</span>
@@ -276,7 +383,7 @@ const contentStyle = computed<CSSProperties>(() => ({
  <button
  type="button"
  aria-label="Cerrar sidebar"
- class="rounded-md border px-2 py-1 "
+ :style="iconButtonStyle"
  @click="cerrarPanel"
  >
  <span class="material-symbols-outlined text-lg">left_panel_close</span>
@@ -286,31 +393,29 @@ const contentStyle = computed<CSSProperties>(() => ({
  <div class="px-3">
  <button
  type="button"
- class="mb-2 flex w-full items-center justify-between rounded-md border px-3 py-2 text-xs font-semibold "
+ class="mb-2"
+ :style="blockButtonStyle"
  @click="toggleModoDesarrollador"
  >
  <span>Modo desarrollador</span>
- <span
- class="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
- :class="modoDesarrollador ? ' ' : ' '"
- >
+ <span :style="estadoBadgeStyle(modoDesarrollador)">
  {{ modoDesarrollador ? "Activo" : "Oculto" }}
  </span>
  </button>
  </div>
  <div class="mt-3 flex-1 min-h-0 space-y-2 overflow-y-auto">
- <div class="rounded-xl border p-3 transition ">
- <div class="flex items-start justify-between gap-2">
+ <div class="transition" :style="navCardStyle">
+ <div :style="headerRowStyle">
  <RouterLink :to="`${basePath}/content`" class="min-w-0 flex-1">
- <p class="text-sm font-black">Contenido</p>
- <p class="text-xs ">
+ <p class="text-sm font-black" :style="{ color: cmsText }">Contenido</p>
+ <p class="text-xs" :style="{ color: cmsMuted }">
  Formularios y registros
  </p>
  </RouterLink>
  <button
  type="button"
  aria-label="Expandir o contraer contenido"
- class="rounded-md border px-2 py-1 "
+ :style="iconButtonStyle"
  @click="toggleContenido"
  >
  <span class="material-symbols-outlined text-base leading-none">
@@ -324,15 +429,10 @@ const contentStyle = computed<CSSProperties>(() => ({
  v-for="schema in schemasDiccionario"
  :key="schema.id"
  :to="toContenidoLink(schema.id)"
- class="block rounded-lg border px-2 py-1.5 text-xs transition"
- :class="
- contenidoActivo(schema.id)
- ? ' '
- : ' '
- "
+ :style="navItemStyle(contenidoActivo(schema.id))"
  >
  <p class="font-semibold">{{ schema.title }}</p>
- <p :class="contenidoActivo(schema.id) ? '' : ''">
+ <p :style="navMetaStyle(contenidoActivo(schema.id))">
  {{ schema.storageType }} · {{ schema.collectionName }}
  </p>
  </RouterLink>
@@ -353,20 +453,15 @@ const contentStyle = computed<CSSProperties>(() => ({
  </div>
 
  <div v-if="schemasDocumento.length" class="space-y-1 rounded-xl border p-3">
- <p class="px-1 text-[11px] font-black uppercase tracking-wide ">Documentos</p>
+ <p class="px-1 text-[11px] font-black uppercase tracking-wide" :style="{ color: cmsMuted }">Documentos</p>
  <RouterLink
  v-for="schema in schemasDocumento"
  :key="`document-link-${schema.id}`"
  :to="toContenidoLink(schema.id)"
- class="block rounded-lg border px-2 py-1.5 text-xs transition"
- :class="
- contenidoActivo(schema.id)
- ? ' '
- : ' '
- "
+ :style="navItemStyle(contenidoActivo(schema.id))"
  >
  <p class="font-semibold">{{ schema.title }}</p>
- <p :class="contenidoActivo(schema.id) ? '' : ''">
+ <p :style="navMetaStyle(contenidoActivo(schema.id))">
  document · {{ schema.collectionName }}
  </p>
  </RouterLink>
@@ -374,19 +469,20 @@ const contentStyle = computed<CSSProperties>(() => ({
 
  <div
  v-if="modoDesarrollador"
- class="rounded-xl border p-3 transition "
+ class="transition"
+ :style="navCardStyle"
  >
- <div class="flex items-start justify-between gap-2">
+ <div :style="headerRowStyle">
  <RouterLink :to="`${basePath}/schemas`" class="min-w-0 flex-1">
- <p class="text-sm font-black">Esquemas</p>
- <p class="text-xs ">
+ <p class="text-sm font-black" :style="{ color: cmsText }">Esquemas</p>
+ <p class="text-xs" :style="{ color: cmsMuted }">
  Edición de esquemas
  </p>
  </RouterLink>
  <button
  type="button"
  aria-label="Expandir o contraer esquemas"
- class="rounded-md border px-2 py-1 "
+ :style="iconButtonStyle"
  @click="toggleEsquemas"
  >
  <span class="material-symbols-outlined text-base leading-none">
@@ -400,15 +496,10 @@ const contentStyle = computed<CSSProperties>(() => ({
  v-for="schema in schemasContenido"
  :key="`schema-edit-${schema.id}`"
  :to="toEsquemaLink(schema.id)"
- class="block rounded-lg border px-2 py-1.5 text-xs transition"
- :class="
- esquemaActivo(schema.id)
- ? ' '
- : ' '
- "
+ :style="navItemStyle(esquemaActivo(schema.id))"
  >
  <p class="font-semibold">{{ schema.title }}</p>
- <p :class="esquemaActivo(schema.id) ? '' : ''">
+ <p :style="navMetaStyle(esquemaActivo(schema.id))">
  {{ schema.storageType }} · {{ schema.collectionName }}
  </p>
  </RouterLink>
@@ -425,33 +516,30 @@ const contentStyle = computed<CSSProperties>(() => ({
  <RouterLink
  v-if="modoDesarrollador"
  :to="`${basePath}/users`"
- class="block rounded-xl border p-3 transition"
- :class="
- activoModulo(`${basePath}/users`)
- ? ' '
- : ' '
- "
+ class="transition"
+ :style="navItemStyle(activoModulo(`${basePath}/users`))"
  >
  <p class="text-sm font-black">Usuarios</p>
- <p class="text-xs" :class="activoModulo(`${basePath}/users`) ? '' : ''">
+ <p class="text-xs" :style="navMetaStyle(activoModulo(`${basePath}/users`))">
  Roles y último ingreso
  </p>
  </RouterLink>
  </div>
 
- <div class="mt-3 border-t pt-3">
+ <div class="mt-3 border-t pt-3" :style="footerStyle">
  <div class="flex items-center gap-2 rounded-xl border p-2">
  <button
  type="button"
- class="min-w-0 flex-1 rounded-md px-3 py-2 text-left text-xs "
+ class="min-w-0 flex-1 rounded-md px-3 py-2 text-left text-xs"
+ :style="{ border: `1px solid ${cmsBorder}`, backgroundColor: cmsSurface, color: cmsText }"
  >
- <p class="font-semibold ">Cuenta actual</p>
- <p class="truncate ">{{ emailActual }}</p>
+ <p class="font-semibold">Cuenta actual</p>
+ <p class="truncate" :style="{ color: cmsMuted }">{{ emailActual }}</p>
  </button>
  <button
  type="button"
  aria-label="Cerrar sesión"
- class="rounded-md border px-2 py-2 "
+ :style="iconButtonStyle"
  @click="cerrarSesionActual"
  >
  <span class="material-symbols-outlined text-lg">logout</span>
