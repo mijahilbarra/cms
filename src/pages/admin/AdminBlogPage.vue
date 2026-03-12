@@ -6,30 +6,30 @@ import { rolActual } from "../../firebase/auth";
 import { uploadImageWithCompression } from "../../firebase/storage";
 import { listarSchemasContenido } from "../../services/contentSchemaService";
 import {
-  actualizarRegistroDocumento,
-  crearRegistroDocumento,
-  eliminarRegistroDocumento,
-  guardarRegistroDiccionario,
-  listarRegistrosDocumento,
-  obtenerRegistroDiccionario,
-  type DynamicDocumentRecord
+ actualizarRegistroDocumento,
+ crearRegistroDocumento,
+ eliminarRegistroDocumento,
+ guardarRegistroDiccionario,
+ listarRegistrosDocumento,
+ obtenerRegistroDiccionario,
+ type DynamicDocumentRecord
 } from "../../services/dynamicDocumentService";
 import type {
-  CmsContentSchema,
-  CmsFieldSchema,
-  CmsNestedFieldSchema
+ CmsContentSchema,
+ CmsFieldSchema,
+ CmsNestedFieldSchema
 } from "../../types/contentSchema";
 import { toSlug } from "../../utils/slug";
 
 type DocumentRelationOption = {
-  id: string;
-  label: string;
-  hint: string;
+ id: string;
+ label: string;
+ hint: string;
 };
 
 type DocumentRelationState = {
-  options: DocumentRelationOption[];
-  byId: Record<string, DynamicDocumentRecord>;
+ options: DocumentRelationOption[];
+ byId: Record<string, DynamicDocumentRecord>;
 };
 
 const route = useRoute();
@@ -51,1180 +51,1180 @@ const registroEditandoId = ref("");
 const modalFormularioDiccionarioAbierto = ref(false);
 
 const puedeEditarContenido = computed(() => {
-  return rolActual.value === "admin" || rolActual.value === "writer" || rolActual.value === "manager";
+ return rolActual.value === "admin" || rolActual.value === "writer" || rolActual.value === "manager";
 });
 
 const selectedSchema = computed(() => {
-  return schemas.value.find((item) => item.id === selectedSchemaId.value) ?? null;
+ return schemas.value.find((item) => item.id === selectedSchemaId.value) ?? null;
 });
 
 const estaEditandoRegistro = computed(() => {
-  return Boolean(registroEditandoId.value);
+ return Boolean(registroEditandoId.value);
 });
 
 onMounted(async () => {
-  await cargarTodo();
+ await cargarTodo();
 });
 
 watch(
-  selectedSchema,
-  async (schema) => {
-    if (!schema) {
-      formValues.value = {};
-      formFiles.value = {};
-      registros.value = [];
-      documentFieldState.value = {};
-      registroEditandoId.value = "";
-      modalFormularioDiccionarioAbierto.value = false;
-      return;
-    }
+ selectedSchema,
+ async (schema) => {
+ if (!schema) {
+ formValues.value = {};
+ formFiles.value = {};
+ registros.value = [];
+ documentFieldState.value = {};
+ registroEditandoId.value = "";
+ modalFormularioDiccionarioAbierto.value = false;
+ return;
+ }
 
-    if (schema.storageType !== "dictionary") {
-      modalFormularioDiccionarioAbierto.value = false;
-    }
+ if (schema.storageType !== "dictionary") {
+ modalFormularioDiccionarioAbierto.value = false;
+ }
 
-    inicializarFormularioRegistro(schema);
-    await cargarRegistros(schema);
-    await cargarOpcionesRelaciones(schema);
-  },
-  { immediate: true }
+ inicializarFormularioRegistro(schema);
+ await cargarRegistros(schema);
+ await cargarOpcionesRelaciones(schema);
+ },
+ { immediate: true }
 );
 
 watch(
-  () => route.query.schema,
-  (value) => {
-    if (typeof value !== "string") {
-      return;
-    }
+ () => route.query.schema,
+ (value) => {
+ if (typeof value !== "string") {
+ return;
+ }
 
-    if (!schemas.value.some((schema) => schema.id === value)) {
-      return;
-    }
+ if (!schemas.value.some((schema) => schema.id === value)) {
+ return;
+ }
 
-    if (selectedSchemaId.value !== value) {
-      selectedSchemaId.value = value;
-    }
-  }
+ if (selectedSchemaId.value !== value) {
+ selectedSchemaId.value = value;
+ }
+ }
 );
 
 async function cargarTodo(): Promise<void> {
-  cargandoSchemas.value = true;
-  errorSchema.value = "";
+ cargandoSchemas.value = true;
+ errorSchema.value = "";
 
-  try {
-    await cargarSchemas();
-  } catch {
-    errorSchema.value = "No se pudieron cargar los tipos de contenido.";
-  } finally {
-    cargandoSchemas.value = false;
-  }
+ try {
+ await cargarSchemas();
+ } catch {
+ errorSchema.value = "No se pudieron cargar los tipos de contenido.";
+ } finally {
+ cargandoSchemas.value = false;
+ }
 }
 
 async function cargarSchemas(): Promise<void> {
-  const encontrados = await listarSchemasContenido();
-  schemas.value = encontrados;
+ const encontrados = await listarSchemasContenido();
+ schemas.value = encontrados;
 
-  if (!encontrados.length) {
-    selectedSchemaId.value = "";
-    return;
-  }
+ if (!encontrados.length) {
+ selectedSchemaId.value = "";
+ return;
+ }
 
-  const schemaFromQuery = typeof route.query.schema === "string" ? route.query.schema : "";
-  if (schemaFromQuery && encontrados.some((schema) => schema.id === schemaFromQuery)) {
-    selectedSchemaId.value = schemaFromQuery;
-    return;
-  }
+ const schemaFromQuery = typeof route.query.schema === "string" ? route.query.schema : "";
+ if (schemaFromQuery && encontrados.some((schema) => schema.id === schemaFromQuery)) {
+ selectedSchemaId.value = schemaFromQuery;
+ return;
+ }
 
-  const existeSeleccionActual = encontrados.some((schema) => schema.id === selectedSchemaId.value);
-  if (existeSeleccionActual) {
-    return;
-  }
+ const existeSeleccionActual = encontrados.some((schema) => schema.id === selectedSchemaId.value);
+ if (existeSeleccionActual) {
+ return;
+ }
 
-  selectedSchemaId.value = encontrados[0].id;
-  await actualizarRutaSchema(selectedSchemaId.value);
+ selectedSchemaId.value = encontrados[0].id;
+ await actualizarRutaSchema(selectedSchemaId.value);
 }
 
 async function actualizarRutaSchema(schemaId: string): Promise<void> {
-  if (!schemaId) {
-    return;
-  }
-  if (route.query.schema === schemaId) {
-    return;
-  }
+ if (!schemaId) {
+ return;
+ }
+ if (route.query.schema === schemaId) {
+ return;
+ }
 
-  await router.replace({
-    query: {
-      ...route.query,
-      schema: schemaId
-    }
-  });
+ await router.replace({
+ query: {
+ ...route.query,
+ schema: schemaId
+ }
+ });
 }
 
 function esRegistro(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+ return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 function esCampoAutogenerado(field: CmsFieldSchema): boolean {
-  if (field.type === "id") {
-    return true;
-  }
-  if (typeof field.autogenerated === "boolean") {
-    return field.autogenerated;
-  }
-  return false;
+ if (field.type === "id") {
+ return true;
+ }
+ if (typeof field.autogenerated === "boolean") {
+ return field.autogenerated;
+ }
+ return false;
 }
 
 function esCampoAutogeneradoGestionado(schema: CmsContentSchema, field: CmsFieldSchema): boolean {
-  if (!esCampoAutogenerado(field)) {
-    return false;
-  }
-  if (field.type === "id") {
-    return schema.storageType === "document";
-  }
-  return true;
+ if (!esCampoAutogenerado(field)) {
+ return false;
+ }
+ if (field.type === "id") {
+ return schema.storageType === "document";
+ }
+ return true;
 }
 
 function camposVisiblesFormulario(schema: CmsContentSchema): CmsFieldSchema[] {
-  return schema.fields.filter((field) => !esCampoAutogeneradoGestionado(schema, field));
+ return schema.fields.filter((field) => !esCampoAutogeneradoGestionado(schema, field));
 }
 
 function inicializarFormularioRegistro(schema: CmsContentSchema): void {
-  const values: Record<string, unknown> = {};
-  const files: Record<string, File | null> = {};
+ const values: Record<string, unknown> = {};
+ const files: Record<string, File | null> = {};
 
-  for (const field of schema.fields) {
-    if (field.type === "boolean") {
-      values[field.key] = false;
-    } else if (field.type === "array") {
-      values[field.key] = [];
-    } else if (field.type === "map") {
-      values[field.key] = {};
-    } else if (field.type === "date") {
-      values[field.key] = "";
-    } else if (field.type === "numeric" || field.type === "id") {
-      values[field.key] = null;
-    } else if (field.type === "document") {
-      values[field.key] = "";
-    } else {
-      values[field.key] = "";
-    }
-    if (field.type === "image") {
-      files[field.key] = null;
-    }
-  }
+ for (const field of schema.fields) {
+ if (field.type === "boolean") {
+ values[field.key] = false;
+ } else if (field.type === "array") {
+ values[field.key] = [];
+ } else if (field.type === "map") {
+ values[field.key] = {};
+ } else if (field.type === "date") {
+ values[field.key] = "";
+ } else if (field.type === "numeric" || field.type === "id") {
+ values[field.key] = null;
+ } else if (field.type === "document") {
+ values[field.key] = "";
+ } else {
+ values[field.key] = "";
+ }
+ if (field.type === "image") {
+ files[field.key] = null;
+ }
+ }
 
-  formValues.value = values;
-  formFiles.value = files;
-  registroEditandoId.value = "";
-  mensajeRegistro.value = "";
-  errorRegistro.value = "";
+ formValues.value = values;
+ formFiles.value = files;
+ registroEditandoId.value = "";
+ mensajeRegistro.value = "";
+ errorRegistro.value = "";
 }
 
 async function cargarRegistros(schema: CmsContentSchema): Promise<void> {
-  cargandoRegistros.value = true;
+ cargandoRegistros.value = true;
 
-  try {
-    if (schema.storageType === "dictionary") {
-      const dictionary = await obtenerRegistroDiccionario(schema);
-      registros.value = dictionary ? [dictionary] : [];
-      registroEditandoId.value = "";
-      if (dictionary) {
-        hidratarFormularioDesdeRegistro(schema, dictionary);
-      }
-      return;
-    }
+ try {
+ if (schema.storageType === "dictionary") {
+ const dictionary = await obtenerRegistroDiccionario(schema);
+ registros.value = dictionary ? [dictionary] : [];
+ registroEditandoId.value = "";
+ if (dictionary) {
+ hidratarFormularioDesdeRegistro(schema, dictionary);
+ }
+ return;
+ }
 
-    const encontrados = await listarRegistrosDocumento(schema, 100);
-    registros.value = encontrados;
+ const encontrados = await listarRegistrosDocumento(schema, 100);
+ registros.value = encontrados;
 
-    if (registroEditandoId.value && !encontrados.some((record) => record.id === registroEditandoId.value)) {
-      registroEditandoId.value = "";
-    }
-  } finally {
-    cargandoRegistros.value = false;
-  }
+ if (registroEditandoId.value && !encontrados.some((record) => record.id === registroEditandoId.value)) {
+ registroEditandoId.value = "";
+ }
+ } finally {
+ cargandoRegistros.value = false;
+ }
 }
 
 async function cargarOpcionesRelaciones(schema: CmsContentSchema): Promise<void> {
-  const relationFields = schema.fields.filter((field) => field.type === "document");
-  if (!relationFields.length) {
-    documentFieldState.value = {};
-    return;
-  }
+ const relationFields = schema.fields.filter((field) => field.type === "document");
+ if (!relationFields.length) {
+ documentFieldState.value = {};
+ return;
+ }
 
-  const nextState: Record<string, DocumentRelationState> = {};
+ const nextState: Record<string, DocumentRelationState> = {};
 
-  await Promise.all(
-    relationFields.map(async (field) => {
-      const relationSchemaId = typeof field.documentSchemaId === "string" ? field.documentSchemaId.trim() : "";
-      if (!relationSchemaId) {
-        nextState[field.key] = { options: [], byId: {} };
-        return;
-      }
+ await Promise.all(
+ relationFields.map(async (field) => {
+ const relationSchemaId = typeof field.documentSchemaId === "string" ? field.documentSchemaId.trim() : "";
+ if (!relationSchemaId) {
+ nextState[field.key] = { options: [], byId: {} };
+ return;
+ }
 
-      const targetSchema = schemas.value.find((entry) => entry.id === relationSchemaId);
-      if (!targetSchema || targetSchema.storageType !== "document") {
-        nextState[field.key] = { options: [], byId: {} };
-        return;
-      }
+ const targetSchema = schemas.value.find((entry) => entry.id === relationSchemaId);
+ if (!targetSchema || targetSchema.storageType !== "document") {
+ nextState[field.key] = { options: [], byId: {} };
+ return;
+ }
 
-      const labelField =
-        (typeof field.documentLabelField === "string" && field.documentLabelField.trim()) ||
-        targetSchema.previewField ||
-        targetSchema.slugFromField ||
-        targetSchema.fields[0]?.key ||
-        "";
+ const labelField =
+ (typeof field.documentLabelField === "string" && field.documentLabelField.trim()) ||
+ targetSchema.previewField ||
+ targetSchema.slugFromField ||
+ targetSchema.fields[0]?.key ||
+ "";
 
-      const targetRecords = await listarRegistrosDocumento(targetSchema, 200);
-      const byId: Record<string, DynamicDocumentRecord> = {};
-      const options = targetRecords.map((record) => {
-        byId[record.id] = record;
-        return {
-          id: record.id,
-          label: relationLabel(record, labelField),
-          hint: relationHint(record)
-        };
-      });
+ const targetRecords = await listarRegistrosDocumento(targetSchema, 200);
+ const byId: Record<string, DynamicDocumentRecord> = {};
+ const options = targetRecords.map((record) => {
+ byId[record.id] = record;
+ return {
+ id: record.id,
+ label: relationLabel(record, labelField),
+ hint: relationHint(record)
+ };
+ });
 
-      nextState[field.key] = { options, byId };
-    })
-  );
+ nextState[field.key] = { options, byId };
+ })
+ );
 
-  documentFieldState.value = nextState;
+ documentFieldState.value = nextState;
 }
 
 function relationLabel(record: DynamicDocumentRecord, labelField: string): string {
-  const rawValue = labelField ? record.data[labelField] : null;
-  if (typeof rawValue === "string" && rawValue.trim()) {
-    return rawValue.trim();
-  }
-  return record.id;
+ const rawValue = labelField ? record.data[labelField] : null;
+ if (typeof rawValue === "string" && rawValue.trim()) {
+ return rawValue.trim();
+ }
+ return record.id;
 }
 
 function relationHint(record: DynamicDocumentRecord): string {
-  const telefono = record.data.telefono;
-  if (typeof telefono === "string" && telefono.trim()) {
-    return `Tel: ${telefono.trim()}`;
-  }
-  return "";
+ const telefono = record.data.telefono;
+ if (typeof telefono === "string" && telefono.trim()) {
+ return `Tel: ${telefono.trim()}`;
+ }
+ return "";
 }
 
 function hidratarFormularioDesdeRegistro(
-  schema: CmsContentSchema,
-  registro: DynamicDocumentRecord
+ schema: CmsContentSchema,
+ registro: DynamicDocumentRecord
 ): void {
-  const nextValues = { ...formValues.value };
+ const nextValues = { ...formValues.value };
 
-  for (const field of schema.fields) {
-    const value = registro.data[field.key];
-    if (field.type === "boolean") {
-      nextValues[field.key] = Boolean(value);
-    } else if (field.type === "array" || field.type === "map") {
-      nextValues[field.key] = parsearValorComplejo(field, value);
-    } else if (field.type === "date") {
-      nextValues[field.key] = normalizarFechaEntrada(value);
-    } else if (field.type === "numeric") {
-      nextValues[field.key] = normalizarNumeroEntrada(value);
-    } else if (field.type === "id") {
-      nextValues[field.key] = normalizarIdEntrada(value);
-    } else if (field.type === "document") {
-      nextValues[field.key] = typeof value === "string" ? value : "";
-    } else if (typeof value === "string") {
-      nextValues[field.key] = value;
-    } else {
-      nextValues[field.key] = "";
-    }
-  }
+ for (const field of schema.fields) {
+ const value = registro.data[field.key];
+ if (field.type === "boolean") {
+ nextValues[field.key] = Boolean(value);
+ } else if (field.type === "array" || field.type === "map") {
+ nextValues[field.key] = parsearValorComplejo(field, value);
+ } else if (field.type === "date") {
+ nextValues[field.key] = normalizarFechaEntrada(value);
+ } else if (field.type === "numeric") {
+ nextValues[field.key] = normalizarNumeroEntrada(value);
+ } else if (field.type === "id") {
+ nextValues[field.key] = normalizarIdEntrada(value);
+ } else if (field.type === "document") {
+ nextValues[field.key] = typeof value === "string" ? value : "";
+ } else if (typeof value === "string") {
+ nextValues[field.key] = value;
+ } else {
+ nextValues[field.key] = "";
+ }
+ }
 
-  formValues.value = nextValues;
+ formValues.value = nextValues;
 }
 
 function editarRegistro(registro: DynamicDocumentRecord): void {
-  const schema = selectedSchema.value;
-  if (!schema || schema.storageType !== "document") {
-    return;
-  }
+ const schema = selectedSchema.value;
+ if (!schema || schema.storageType !== "document") {
+ return;
+ }
 
-  inicializarFormularioRegistro(schema);
-  hidratarFormularioDesdeRegistro(schema, registro);
-  registroEditandoId.value = registro.id;
+ inicializarFormularioRegistro(schema);
+ hidratarFormularioDesdeRegistro(schema, registro);
+ registroEditandoId.value = registro.id;
 }
 
 function abrirModalFormularioDiccionario(): void {
-  const schema = selectedSchema.value;
-  if (!schema || schema.storageType !== "dictionary") {
-    return;
-  }
+ const schema = selectedSchema.value;
+ if (!schema || schema.storageType !== "dictionary") {
+ return;
+ }
 
-  if (registros.value[0]) {
-    hidratarFormularioDesdeRegistro(schema, registros.value[0]);
-  } else {
-    inicializarFormularioRegistro(schema);
-  }
+ if (registros.value[0]) {
+ hidratarFormularioDesdeRegistro(schema, registros.value[0]);
+ } else {
+ inicializarFormularioRegistro(schema);
+ }
 
-  errorRegistro.value = "";
-  modalFormularioDiccionarioAbierto.value = true;
+ errorRegistro.value = "";
+ modalFormularioDiccionarioAbierto.value = true;
 }
 
 function cerrarModalFormularioDiccionario(): void {
-  modalFormularioDiccionarioAbierto.value = false;
-  errorRegistro.value = "";
+ modalFormularioDiccionarioAbierto.value = false;
+ errorRegistro.value = "";
 }
 
 function cancelarEdicionRegistro(): void {
-  const schema = selectedSchema.value;
-  if (!schema || schema.storageType !== "document") {
-    return;
-  }
+ const schema = selectedSchema.value;
+ if (!schema || schema.storageType !== "document") {
+ return;
+ }
 
-  inicializarFormularioRegistro(schema);
+ inicializarFormularioRegistro(schema);
 }
 
 async function guardarRegistro(): Promise<void> {
-  const schema = selectedSchema.value;
-  if (!schema) {
-    return;
-  }
+ const schema = selectedSchema.value;
+ if (!schema) {
+ return;
+ }
 
-  mensajeRegistro.value = "";
-  errorRegistro.value = "";
+ mensajeRegistro.value = "";
+ errorRegistro.value = "";
 
-  if (!puedeEditarContenido.value) {
-    errorRegistro.value = "Tu rol no tiene permisos para crear o editar contenido.";
-    return;
-  }
+ if (!puedeEditarContenido.value) {
+ errorRegistro.value = "Tu rol no tiene permisos para crear o editar contenido.";
+ return;
+ }
 
-  guardandoRegistro.value = true;
+ guardandoRegistro.value = true;
 
-  try {
-    const payload: Record<string, unknown> = {};
+ try {
+ const payload: Record<string, unknown> = {};
 
-    for (const field of schema.fields) {
-      if (esCampoAutogeneradoGestionado(schema, field)) {
-        continue;
-      }
-      payload[field.key] = await resolverValorCampo(schema, field);
-      validarCampoRequerido(schema, field, payload[field.key]);
-    }
+ for (const field of schema.fields) {
+ if (esCampoAutogeneradoGestionado(schema, field)) {
+ continue;
+ }
+ payload[field.key] = await resolverValorCampo(schema, field);
+ validarCampoRequerido(schema, field, payload[field.key]);
+ }
 
-    const esCreacionDocumento = schema.storageType === "document" && !registroEditandoId.value;
-    if (schema.storageType === "dictionary" || esCreacionDocumento) {
-      aplicarCamposAutogeneradosEnPayload(schema, payload);
-    }
+ const esCreacionDocumento = schema.storageType === "document" && !registroEditandoId.value;
+ if (schema.storageType === "dictionary" || esCreacionDocumento) {
+ aplicarCamposAutogeneradosEnPayload(schema, payload);
+ }
 
-    if (schema.slugFromField) {
-      const source = payload[schema.slugFromField];
-      if (typeof source === "string" && source.trim()) {
-        payload.slug = toSlug(source);
-      }
-    }
+ if (schema.slugFromField) {
+ const source = payload[schema.slugFromField];
+ if (typeof source === "string" && source.trim()) {
+ payload.slug = toSlug(source);
+ }
+ }
 
-    if (schema.storageType === "dictionary") {
-      await guardarRegistroDiccionario(schema, payload);
-      mensajeRegistro.value = "Registro de diccionario actualizado.";
-      modalFormularioDiccionarioAbierto.value = false;
-    } else {
-      if (registroEditandoId.value) {
-        await actualizarRegistroDocumento(schema, registroEditandoId.value, payload);
-        mensajeRegistro.value = "Registro actualizado correctamente.";
-      } else {
-        await crearRegistroDocumento(schema, payload);
-        mensajeRegistro.value = "Registro creado correctamente.";
-      }
-      inicializarFormularioRegistro(schema);
-    }
+ if (schema.storageType === "dictionary") {
+ await guardarRegistroDiccionario(schema, payload);
+ mensajeRegistro.value = "Registro de diccionario actualizado.";
+ modalFormularioDiccionarioAbierto.value = false;
+ } else {
+ if (registroEditandoId.value) {
+ await actualizarRegistroDocumento(schema, registroEditandoId.value, payload);
+ mensajeRegistro.value = "Registro actualizado correctamente.";
+ } else {
+ await crearRegistroDocumento(schema, payload);
+ mensajeRegistro.value = "Registro creado correctamente.";
+ }
+ inicializarFormularioRegistro(schema);
+ }
 
-    await cargarRegistros(schema);
-  } catch (error) {
-    errorRegistro.value = error instanceof Error ? error.message : "No se pudo guardar el registro.";
-  } finally {
-    guardandoRegistro.value = false;
-  }
+ await cargarRegistros(schema);
+ } catch (error) {
+ errorRegistro.value = error instanceof Error ? error.message : "No se pudo guardar el registro.";
+ } finally {
+ guardandoRegistro.value = false;
+ }
 }
 
 async function resolverValorCampo(
-  schema: CmsContentSchema,
-  field: CmsFieldSchema
+ schema: CmsContentSchema,
+ field: CmsFieldSchema
 ): Promise<unknown> {
-  if (field.type === "boolean") {
-    return Boolean(formValues.value[field.key]);
-  }
+ if (field.type === "boolean") {
+ return Boolean(formValues.value[field.key]);
+ }
 
-  if (field.type === "image") {
-    const file = formFiles.value[field.key];
-    if (!file) {
-      return valorTexto(field.key);
-    }
+ if (field.type === "image") {
+ const file = formFiles.value[field.key];
+ if (!file) {
+ return valorTexto(field.key);
+ }
 
-    const cleanName = limpiarNombreArchivo(file.name);
-    const url = await uploadImageWithCompression(
-      `${schema.collectionName}/${field.key}/${Date.now()}-${cleanName}`,
-      file,
-      { maxWidth: 1920, maxHeight: 1080, targetSizeKb: 900, quality: 0.82 }
-    );
+ const cleanName = limpiarNombreArchivo(file.name);
+ const url = await uploadImageWithCompression(
+ `${schema.collectionName}/${field.key}/${Date.now()}-${cleanName}`,
+ file,
+ { maxWidth: 1920, maxHeight: 1080, targetSizeKb: 900, quality: 0.82 }
+ );
 
-    formValues.value[field.key] = url;
-    formFiles.value[field.key] = null;
-    return url;
-  }
+ formValues.value[field.key] = url;
+ formFiles.value[field.key] = null;
+ return url;
+ }
 
-  if (field.type === "array" || field.type === "map") {
-    return parsearValorComplejo(field, formValues.value[field.key], true);
-  }
+ if (field.type === "array" || field.type === "map") {
+ return parsearValorComplejo(field, formValues.value[field.key], true);
+ }
 
-  if (field.type === "date") {
-    return valorFechaFirestore(field.key);
-  }
+ if (field.type === "date") {
+ return valorFechaFirestore(field.key);
+ }
 
-  if (field.type === "numeric") {
-    return valorNumero(field.key);
-  }
+ if (field.type === "numeric") {
+ return valorNumero(field.key);
+ }
 
-  if (field.type === "id") {
-    if (schema.storageType === "document" && !registroEditandoId.value) {
-      return null;
-    }
-    return normalizarIdEntrada(formValues.value[field.key]);
-  }
+ if (field.type === "id") {
+ if (schema.storageType === "document" && !registroEditandoId.value) {
+ return null;
+ }
+ return normalizarIdEntrada(formValues.value[field.key]);
+ }
 
-  if (field.type === "document") {
-    return valorTexto(field.key);
-  }
+ if (field.type === "document") {
+ return valorTexto(field.key);
+ }
 
-  return valorTexto(field.key);
+ return valorTexto(field.key);
 }
 
 function validarCampoRequerido(schema: CmsContentSchema, field: CmsFieldSchema, value: unknown): void {
-  if (!field.required) {
-    return;
-  }
+ if (!field.required) {
+ return;
+ }
 
-  if (field.type === "boolean") {
-    return;
-  }
+ if (field.type === "boolean") {
+ return;
+ }
 
-  if (field.type === "array") {
-    if (!Array.isArray(value) || !value.length) {
-      throw new Error(`El campo \"${field.label}\" es obligatorio y debe tener al menos 1 elemento.`);
-    }
-    return;
-  }
+ if (field.type === "array") {
+ if (!Array.isArray(value) || !value.length) {
+ throw new Error(`El campo \"${field.label}\" es obligatorio y debe tener al menos 1 elemento.`);
+ }
+ return;
+ }
 
-  if (field.type === "map") {
-    if (!esRegistro(value) || Object.keys(value).length === 0) {
-      throw new Error(`El campo \"${field.label}\" es obligatorio y debe tener al menos 1 propiedad.`);
-    }
-    return;
-  }
+ if (field.type === "map") {
+ if (!esRegistro(value) || Object.keys(value).length === 0) {
+ throw new Error(`El campo \"${field.label}\" es obligatorio y debe tener al menos 1 propiedad.`);
+ }
+ return;
+ }
 
-  if (field.type === "id" && schema.storageType === "document" && !registroEditandoId.value) {
-    return;
-  }
+ if (field.type === "id" && schema.storageType === "document" && !registroEditandoId.value) {
+ return;
+ }
 
-  if (field.type === "numeric") {
-    if (typeof value !== "number" || !Number.isFinite(value)) {
-      throw new Error(`El campo \"${field.label}\" es obligatorio y debe ser numérico.`);
-    }
-    return;
-  }
+ if (field.type === "numeric") {
+ if (typeof value !== "number" || !Number.isFinite(value)) {
+ throw new Error(`El campo \"${field.label}\" es obligatorio y debe ser numérico.`);
+ }
+ return;
+ }
 
-  if (field.type === "id") {
-    if (typeof value !== "number" || !Number.isInteger(value) || value < 1) {
-      throw new Error(`El campo \"${field.label}\" es obligatorio y debe ser un entero mayor o igual a 1.`);
-    }
-    return;
-  }
+ if (field.type === "id") {
+ if (typeof value !== "number" || !Number.isInteger(value) || value < 1) {
+ throw new Error(`El campo \"${field.label}\" es obligatorio y debe ser un entero mayor o igual a 1.`);
+ }
+ return;
+ }
 
-  if (field.type === "date") {
-    if (!(value instanceof Date) || Number.isNaN(value.getTime())) {
-      throw new Error(`El campo \"${field.label}\" es obligatorio y debe ser una fecha válida.`);
-    }
-    return;
-  }
+ if (field.type === "date") {
+ if (!(value instanceof Date) || Number.isNaN(value.getTime())) {
+ throw new Error(`El campo \"${field.label}\" es obligatorio y debe ser una fecha válida.`);
+ }
+ return;
+ }
 
-  if (typeof value !== "string" || !value.trim()) {
-    throw new Error(`El campo \"${field.label}\" es obligatorio.`);
-  }
+ if (typeof value !== "string" || !value.trim()) {
+ throw new Error(`El campo \"${field.label}\" es obligatorio.`);
+ }
 }
 
 function parsearValorComplejo(
-  field: CmsFieldSchema,
-  parsed: unknown,
-  paraFirestore = false
+ field: CmsFieldSchema,
+ parsed: unknown,
+ paraFirestore = false
 ): unknown {
-  if (typeof parsed === "string") {
-    const trimmed = parsed.trim();
-    const legacyStringAsJson = trimmed.startsWith("{") || trimmed.startsWith("[");
-    if (!legacyStringAsJson) {
-      parsed = field.type === "array" ? [] : {};
-    } else {
-      try {
-        parsed = JSON.parse(trimmed);
-      } catch {
-        parsed = field.type === "array" ? [] : {};
-      }
-    }
-  }
+ if (typeof parsed === "string") {
+ const trimmed = parsed.trim();
+ const legacyStringAsJson = trimmed.startsWith("{") || trimmed.startsWith("[");
+ if (!legacyStringAsJson) {
+ parsed = field.type === "array" ? [] : {};
+ } else {
+ try {
+ parsed = JSON.parse(trimmed);
+ } catch {
+ parsed = field.type === "array" ? [] : {};
+ }
+ }
+ }
 
-  if (field.type === "array") {
-    const arrayValue = Array.isArray(parsed) ? parsed : [];
-    if (field.itemSchema) {
-      return arrayValue.map((item, index) =>
-        normalizarValorContraNodo(
-          field.itemSchema as CmsNestedFieldSchema,
-          item,
-          `${field.label}[${index}]`,
-          paraFirestore
-        )
-      );
-    }
-    return arrayValue;
-  }
+ if (field.type === "array") {
+ const arrayValue = Array.isArray(parsed) ? parsed : [];
+ if (field.itemSchema) {
+ return arrayValue.map((item, index) =>
+ normalizarValorContraNodo(
+ field.itemSchema as CmsNestedFieldSchema,
+ item,
+ `${field.label}[${index}]`,
+ paraFirestore
+ )
+ );
+ }
+ return arrayValue;
+ }
 
-  const mapValue = esRegistro(parsed) ? parsed : {};
+ const mapValue = esRegistro(parsed) ? parsed : {};
 
-  if (Array.isArray(field.mapFields) && field.mapFields.length > 0) {
-    return normalizarValorContraMapFields(field.mapFields, mapValue, field.label, paraFirestore);
-  }
+ if (Array.isArray(field.mapFields) && field.mapFields.length > 0) {
+ return normalizarValorContraMapFields(field.mapFields, mapValue, field.label, paraFirestore);
+ }
 
-  return mapValue;
+ return mapValue;
 }
 
 function normalizarValorContraMapFields(
-  fields: CmsFieldSchema[],
-  value: Record<string, unknown>,
-  contexto: string,
-  paraFirestore = false
+ fields: CmsFieldSchema[],
+ value: Record<string, unknown>,
+ contexto: string,
+ paraFirestore = false
 ): Record<string, unknown> {
-  const output: Record<string, unknown> = {};
+ const output: Record<string, unknown> = {};
 
-  for (const field of fields) {
-    const key = field.key;
-    if (!(key in value)) {
-      if (field.required) {
-        throw new Error(`Falta la propiedad requerida \"${contexto}.${key}\".`);
-      }
-      continue;
-    }
+ for (const field of fields) {
+ const key = field.key;
+ if (!(key in value)) {
+ if (field.required) {
+ throw new Error(`Falta la propiedad requerida \"${contexto}.${key}\".`);
+ }
+ continue;
+ }
 
-    output[key] = normalizarValorContraNodo(field, value[key], `${contexto}.${key}`, paraFirestore);
-  }
+ output[key] = normalizarValorContraNodo(field, value[key], `${contexto}.${key}`, paraFirestore);
+ }
 
-  return output;
+ return output;
 }
 
 function normalizarValorContraNodo(
-  schema: CmsNestedFieldSchema,
-  value: unknown,
-  contexto: string,
-  paraFirestore = false
+ schema: CmsNestedFieldSchema,
+ value: unknown,
+ contexto: string,
+ paraFirestore = false
 ): unknown {
-  if (schema.type === "array") {
-    if (!Array.isArray(value)) {
-      throw new Error(`\"${contexto}\" debe ser un arreglo.`);
-    }
-    if (!schema.itemSchema) {
-      return value;
-    }
-    return value.map((item, index) =>
-      normalizarValorContraNodo(schema.itemSchema!, item, `${contexto}[${index}]`, paraFirestore)
-    );
-  }
+ if (schema.type === "array") {
+ if (!Array.isArray(value)) {
+ throw new Error(`\"${contexto}\" debe ser un arreglo.`);
+ }
+ if (!schema.itemSchema) {
+ return value;
+ }
+ return value.map((item, index) =>
+ normalizarValorContraNodo(schema.itemSchema!, item, `${contexto}[${index}]`, paraFirestore)
+ );
+ }
 
-  if (schema.type === "map") {
-    if (!esRegistro(value)) {
-      throw new Error(`\"${contexto}\" debe ser un objeto.`);
-    }
-    if (!Array.isArray(schema.mapFields) || schema.mapFields.length === 0) {
-      return value;
-    }
-    return normalizarValorContraMapFields(schema.mapFields, value, contexto, paraFirestore);
-  }
+ if (schema.type === "map") {
+ if (!esRegistro(value)) {
+ throw new Error(`\"${contexto}\" debe ser un objeto.`);
+ }
+ if (!Array.isArray(schema.mapFields) || schema.mapFields.length === 0) {
+ return value;
+ }
+ return normalizarValorContraMapFields(schema.mapFields, value, contexto, paraFirestore);
+ }
 
-  if (schema.type === "boolean") {
-    if (typeof value !== "boolean") {
-      throw new Error(`\"${contexto}\" debe ser boolean.`);
-    }
-    return value;
-  }
+ if (schema.type === "boolean") {
+ if (typeof value !== "boolean") {
+ throw new Error(`\"${contexto}\" debe ser boolean.`);
+ }
+ return value;
+ }
 
-  if (schema.type === "document") {
-    if (typeof value !== "string") {
-      throw new Error(`\"${contexto}\" debe ser string (id de documento).`);
-    }
-    return value;
-  }
+ if (schema.type === "document") {
+ if (typeof value !== "string") {
+ throw new Error(`\"${contexto}\" debe ser string (id de documento).`);
+ }
+ return value;
+ }
 
-  if (schema.type === "numeric") {
-    if (typeof value !== "number" || !Number.isFinite(value)) {
-      throw new Error(`\"${contexto}\" debe ser numérico.`);
-    }
-    return value;
-  }
+ if (schema.type === "numeric") {
+ if (typeof value !== "number" || !Number.isFinite(value)) {
+ throw new Error(`\"${contexto}\" debe ser numérico.`);
+ }
+ return value;
+ }
 
-  if (schema.type === "id") {
-    if (typeof value !== "number" || !Number.isInteger(value) || value < 1) {
-      throw new Error(`\"${contexto}\" debe ser un número entero mayor o igual a 1.`);
-    }
-    return value;
-  }
+ if (schema.type === "id") {
+ if (typeof value !== "number" || !Number.isInteger(value) || value < 1) {
+ throw new Error(`\"${contexto}\" debe ser un número entero mayor o igual a 1.`);
+ }
+ return value;
+ }
 
-  if (schema.type === "date") {
-    const parsedDate = resolverFechaDesdeValor(value);
-    if (!parsedDate) {
-      throw new Error(`\"${contexto}\" debe ser una fecha válida.`);
-    }
-    return paraFirestore ? parsedDate : normalizarFechaEntrada(parsedDate);
-  }
+ if (schema.type === "date") {
+ const parsedDate = resolverFechaDesdeValor(value);
+ if (!parsedDate) {
+ throw new Error(`\"${contexto}\" debe ser una fecha válida.`);
+ }
+ return paraFirestore ? parsedDate : normalizarFechaEntrada(parsedDate);
+ }
 
-  if (typeof value !== "string") {
-    throw new Error(`\"${contexto}\" debe ser string.`);
-  }
+ if (typeof value !== "string") {
+ throw new Error(`\"${contexto}\" debe ser string.`);
+ }
 
-  if (schema.type === "select" && Array.isArray(schema.options) && schema.options.length > 0) {
-    if (value && !schema.options.includes(value)) {
-      throw new Error(`\"${contexto}\" no coincide con las opciones del select.`);
-    }
-  }
+ if (schema.type === "select" && Array.isArray(schema.options) && schema.options.length > 0) {
+ if (value && !schema.options.includes(value)) {
+ throw new Error(`\"${contexto}\" no coincide con las opciones del select.`);
+ }
+ }
 
-  return value;
+ return value;
 }
 
 async function borrarRegistro(recordId: string): Promise<void> {
-  const schema = selectedSchema.value;
-  if (!schema || schema.storageType !== "document") {
-    return;
-  }
+ const schema = selectedSchema.value;
+ if (!schema || schema.storageType !== "document") {
+ return;
+ }
 
-  if (!puedeEditarContenido.value) {
-    errorRegistro.value = "Tu rol no tiene permisos para eliminar contenido.";
-    return;
-  }
+ if (!puedeEditarContenido.value) {
+ errorRegistro.value = "Tu rol no tiene permisos para eliminar contenido.";
+ return;
+ }
 
-  if (!window.confirm("¿Seguro que quieres eliminar este registro?")) {
-    return;
-  }
+ if (!window.confirm("¿Seguro que quieres eliminar este registro?")) {
+ return;
+ }
 
-  await eliminarRegistroDocumento(schema, recordId);
-  if (registroEditandoId.value === recordId) {
-    inicializarFormularioRegistro(schema);
-  }
-  await cargarRegistros(schema);
+ await eliminarRegistroDocumento(schema, recordId);
+ if (registroEditandoId.value === recordId) {
+ inicializarFormularioRegistro(schema);
+ }
+ await cargarRegistros(schema);
 }
 
 async function subirImagenEditor(file: File): Promise<string> {
-  const schema = selectedSchema.value;
-  if (!schema) {
-    throw new Error("No hay schema seleccionado.");
-  }
+ const schema = selectedSchema.value;
+ if (!schema) {
+ throw new Error("No hay schema seleccionado.");
+ }
 
-  const cleanName = limpiarNombreArchivo(file.name);
-  return uploadImageWithCompression(
-    `${schema.collectionName}/editor/${Date.now()}-${cleanName}`,
-    file,
-    { maxWidth: 1600, maxHeight: 1600, targetSizeKb: 700, quality: 0.8 }
-  );
+ const cleanName = limpiarNombreArchivo(file.name);
+ return uploadImageWithCompression(
+ `${schema.collectionName}/editor/${Date.now()}-${cleanName}`,
+ file,
+ { maxWidth: 1600, maxHeight: 1600, targetSizeKb: 700, quality: 0.8 }
+ );
 }
 
 function valorTexto(key: string): string {
-  const value = formValues.value[key];
-  return typeof value === "string" ? value : "";
+ const value = formValues.value[key];
+ return typeof value === "string" ? value : "";
 }
 
 function valorFechaInput(key: string): string {
-  return normalizarFechaEntrada(formValues.value[key]);
+ return normalizarFechaEntrada(formValues.value[key]);
 }
 
 function valorFechaFirestore(key: string): Date | null {
-  return resolverFechaDesdeValor(formValues.value[key]);
+ return resolverFechaDesdeValor(formValues.value[key]);
 }
 
 function valorNumero(key: string): number | null {
-  return normalizarNumeroEntrada(formValues.value[key]);
+ return normalizarNumeroEntrada(formValues.value[key]);
 }
 
 function valorNumeroInput(key: string): string {
-  const value = valorNumero(key);
-  return typeof value === "number" ? String(value) : "";
+ const value = valorNumero(key);
+ return typeof value === "number" ? String(value) : "";
 }
 
 function setTexto(key: string, value: string): void {
-  formValues.value[key] = value;
+ formValues.value[key] = value;
 }
 
 function setFecha(key: string, value: string): void {
-  formValues.value[key] = normalizarFechaEntrada(value);
+ formValues.value[key] = normalizarFechaEntrada(value);
 }
 
 function setNumero(key: string, raw: string): void {
-  formValues.value[key] = normalizarNumeroEntrada(raw);
+ formValues.value[key] = normalizarNumeroEntrada(raw);
 }
 
 function valorCampoParaInput(field: CmsFieldSchema): unknown {
-  if (field.type === "boolean") {
-    return valorBoolean(field.key);
-  }
-  if (field.type === "array" || field.type === "map") {
-    return valorComplejo(field.key);
-  }
-  if (field.type === "numeric" || field.type === "id") {
-    return valorNumeroInput(field.key);
-  }
-  if (field.type === "date") {
-    return valorFechaInput(field.key);
-  }
-  return valorTexto(field.key);
+ if (field.type === "boolean") {
+ return valorBoolean(field.key);
+ }
+ if (field.type === "array" || field.type === "map") {
+ return valorComplejo(field.key);
+ }
+ if (field.type === "numeric" || field.type === "id") {
+ return valorNumeroInput(field.key);
+ }
+ if (field.type === "date") {
+ return valorFechaInput(field.key);
+ }
+ return valorTexto(field.key);
 }
 
 function actualizarValorCampo(field: CmsFieldSchema, value: unknown): void {
-  if (field.type === "boolean") {
-    setBoolean(field.key, Boolean(value));
-    return;
-  }
+ if (field.type === "boolean") {
+ setBoolean(field.key, Boolean(value));
+ return;
+ }
 
-  if (field.type === "array" || field.type === "map") {
-    setValorComplejo(field.key, value);
-    return;
-  }
+ if (field.type === "array" || field.type === "map") {
+ setValorComplejo(field.key, value);
+ return;
+ }
 
-  if (field.type === "numeric" || field.type === "id") {
-    setNumero(field.key, typeof value === "string" ? value : "");
-    return;
-  }
+ if (field.type === "numeric" || field.type === "id") {
+ setNumero(field.key, typeof value === "string" ? value : "");
+ return;
+ }
 
-  if (field.type === "date") {
-    setFecha(field.key, typeof value === "string" ? value : "");
-    return;
-  }
+ if (field.type === "date") {
+ setFecha(field.key, typeof value === "string" ? value : "");
+ return;
+ }
 
-  setTexto(field.key, typeof value === "string" ? value : "");
+ setTexto(field.key, typeof value === "string" ? value : "");
 }
 
 function opcionesDocumento(field: CmsFieldSchema): DocumentRelationOption[] {
-  return documentFieldState.value[field.key]?.options ?? [];
+ return documentFieldState.value[field.key]?.options ?? [];
 }
 
 function hintDocumentoSeleccionado(field: CmsFieldSchema): string {
-  const selectedId = valorTexto(field.key);
-  if (!selectedId) {
-    return "";
-  }
+ const selectedId = valorTexto(field.key);
+ if (!selectedId) {
+ return "";
+ }
 
-  const option = opcionesDocumento(field).find((entry) => entry.id === selectedId);
-  return option?.hint ?? "";
+ const option = opcionesDocumento(field).find((entry) => entry.id === selectedId);
+ return option?.hint ?? "";
 }
 
 function valorComplejo(key: string): unknown {
-  return formValues.value[key];
+ return formValues.value[key];
 }
 
 function setValorComplejo(key: string, value: unknown): void {
-  formValues.value[key] = value;
+ formValues.value[key] = value;
 }
 
 function valorBoolean(key: string): boolean {
-  return Boolean(formValues.value[key]);
+ return Boolean(formValues.value[key]);
 }
 
 function setBoolean(key: string, value: boolean): void {
-  formValues.value[key] = value;
+ formValues.value[key] = value;
 }
 
 function setArchivo(key: string, file: File | null): void {
-  formFiles.value[key] = file;
+ formFiles.value[key] = file;
 }
 
 function quitarImagen(key: string): void {
-  formValues.value[key] = "";
-  formFiles.value[key] = null;
+ formValues.value[key] = "";
+ formFiles.value[key] = null;
 }
 
 function valorPreviewRegistro(record: DynamicDocumentRecord, schema: CmsContentSchema): string {
-  const previewKey = schema.previewField || schema.slugFromField || schema.fields[0]?.key;
-  if (!previewKey) {
-    return record.id;
-  }
+ const previewKey = schema.previewField || schema.slugFromField || schema.fields[0]?.key;
+ if (!previewKey) {
+ return record.id;
+ }
 
-  const value = record.data[previewKey];
-  const previewField = schema.fields.find((field) => field.key === previewKey);
+ const value = record.data[previewKey];
+ const previewField = schema.fields.find((field) => field.key === previewKey);
 
-  if (previewField?.type === "date") {
-    const formattedDate = formatearFechaVisual(value);
-    if (formattedDate) {
-      return formattedDate;
-    }
-  }
+ if (previewField?.type === "date") {
+ const formattedDate = formatearFechaVisual(value);
+ if (formattedDate) {
+ return formattedDate;
+ }
+ }
 
-  if (typeof value === "string" && value.trim()) {
-    return value;
-  }
+ if (typeof value === "string" && value.trim()) {
+ return value;
+ }
 
-  if (typeof value === "boolean") {
-    return value ? "true" : "false";
-  }
+ if (typeof value === "boolean") {
+ return value ? "true" : "false";
+ }
 
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return String(value);
-  }
+ if (typeof value === "number" && Number.isFinite(value)) {
+ return String(value);
+ }
 
-  if (Array.isArray(value)) {
-    return `[array:${value.length}]`;
-  }
+ if (Array.isArray(value)) {
+ return `[array:${value.length}]`;
+ }
 
-  if (esRegistro(value)) {
-    return "[map]";
-  }
+ if (esRegistro(value)) {
+ return "[map]";
+ }
 
-  return record.id;
+ return record.id;
 }
 
 function limpiarNombreArchivo(name: string): string {
-  return name
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9.\-_]/g, "-");
+ return name
+ .normalize("NFD")
+ .replace(/[\u0300-\u036f]/g, "")
+ .toLowerCase()
+ .replace(/[^a-z0-9.\-_]/g, "-");
 }
 
 function normalizarNumeroEntrada(value: unknown): number | null {
-  if (typeof value === "number") {
-    return Number.isFinite(value) ? value : null;
-  }
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (!trimmed) {
-      return null;
-    }
-    const parsed = Number(trimmed);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-  return null;
+ if (typeof value === "number") {
+ return Number.isFinite(value) ? value : null;
+ }
+ if (typeof value === "string") {
+ const trimmed = value.trim();
+ if (!trimmed) {
+ return null;
+ }
+ const parsed = Number(trimmed);
+ return Number.isFinite(parsed) ? parsed : null;
+ }
+ return null;
 }
 
 function normalizarIdEntrada(value: unknown): number | null {
-  const parsed = normalizarNumeroEntrada(value);
-  if (parsed === null) {
-    return null;
-  }
-  if (!Number.isInteger(parsed) || parsed < 1) {
-    return null;
-  }
-  return parsed;
+ const parsed = normalizarNumeroEntrada(value);
+ if (parsed === null) {
+ return null;
+ }
+ if (!Number.isInteger(parsed) || parsed < 1) {
+ return null;
+ }
+ return parsed;
 }
 
 function normalizarFechaEntrada(value: unknown): string {
-  const parsed = resolverFechaDesdeValor(value);
-  if (!parsed) {
-    return "";
-  }
-  return formatearFechaInput(parsed);
+ const parsed = resolverFechaDesdeValor(value);
+ if (!parsed) {
+ return "";
+ }
+ return formatearFechaInput(parsed);
 }
 
 function resolverFechaDesdeValor(value: unknown): Date | null {
-  if (value instanceof Date && !Number.isNaN(value.getTime())) {
-    return value;
-  }
+ if (value instanceof Date && !Number.isNaN(value.getTime())) {
+ return value;
+ }
 
-  if (
-    value &&
-    typeof value === "object" &&
-    "toDate" in value &&
-    typeof (value as { toDate?: () => Date }).toDate === "function"
-  ) {
-    const dateValue = (value as { toDate: () => Date }).toDate();
-    if (dateValue instanceof Date && !Number.isNaN(dateValue.getTime())) {
-      return dateValue;
-    }
-  }
+ if (
+ value &&
+ typeof value === "object" &&
+ "toDate" in value &&
+ typeof (value as { toDate?: () => Date }).toDate === "function"
+ ) {
+ const dateValue = (value as { toDate: () => Date }).toDate();
+ if (dateValue instanceof Date && !Number.isNaN(dateValue.getTime())) {
+ return dateValue;
+ }
+ }
 
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (!trimmed) {
-      return null;
-    }
-    const fromInput = parsearFechaDesdeInput(trimmed);
-    if (fromInput) {
-      return fromInput;
-    }
-    const parsed = new Date(trimmed);
-    if (!Number.isNaN(parsed.getTime())) {
-      return parsed;
-    }
-    return null;
-  }
+ if (typeof value === "string") {
+ const trimmed = value.trim();
+ if (!trimmed) {
+ return null;
+ }
+ const fromInput = parsearFechaDesdeInput(trimmed);
+ if (fromInput) {
+ return fromInput;
+ }
+ const parsed = new Date(trimmed);
+ if (!Number.isNaN(parsed.getTime())) {
+ return parsed;
+ }
+ return null;
+ }
 
-  if (typeof value === "number" && Number.isFinite(value)) {
-    const parsed = new Date(value);
-    if (!Number.isNaN(parsed.getTime())) {
-      return parsed;
-    }
-  }
+ if (typeof value === "number" && Number.isFinite(value)) {
+ const parsed = new Date(value);
+ if (!Number.isNaN(parsed.getTime())) {
+ return parsed;
+ }
+ }
 
-  return null;
+ return null;
 }
 
 function parsearFechaDesdeInput(value: string): Date | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (!match) {
-    return null;
-  }
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  const parsed = new Date(Date.UTC(year, month - 1, day));
-  if (
-    parsed.getUTCFullYear() !== year ||
-    parsed.getUTCMonth() + 1 !== month ||
-    parsed.getUTCDate() !== day
-  ) {
-    return null;
-  }
-  return parsed;
+ const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+ if (!match) {
+ return null;
+ }
+ const year = Number(match[1]);
+ const month = Number(match[2]);
+ const day = Number(match[3]);
+ const parsed = new Date(Date.UTC(year, month - 1, day));
+ if (
+ parsed.getUTCFullYear() !== year ||
+ parsed.getUTCMonth() + 1 !== month ||
+ parsed.getUTCDate() !== day
+ ) {
+ return null;
+ }
+ return parsed;
 }
 
 function formatearFechaInput(date: Date): string {
-  const year = String(date.getUTCFullYear()).padStart(4, "0");
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(date.getUTCDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+ const year = String(date.getUTCFullYear()).padStart(4, "0");
+ const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+ const day = String(date.getUTCDate()).padStart(2, "0");
+ return `${year}-${month}-${day}`;
 }
 
 function formatearFechaVisual(value: unknown): string {
-  const parsed = resolverFechaDesdeValor(value);
-  if (!parsed) {
-    return "";
-  }
-  const day = String(parsed.getUTCDate()).padStart(2, "0");
-  const month = String(parsed.getUTCMonth() + 1).padStart(2, "0");
-  const year = String(parsed.getUTCFullYear()).padStart(4, "0");
-  return `${day}/${month}/${year}`;
+ const parsed = resolverFechaDesdeValor(value);
+ if (!parsed) {
+ return "";
+ }
+ const day = String(parsed.getUTCDate()).padStart(2, "0");
+ const month = String(parsed.getUTCMonth() + 1).padStart(2, "0");
+ const year = String(parsed.getUTCFullYear()).padStart(4, "0");
+ return `${day}/${month}/${year}`;
 }
 
 function esCampoIdAutonumerico(field: CmsFieldSchema): boolean {
-  return field.type === "id" && selectedSchema.value?.storageType === "document";
+ return field.type === "id" && selectedSchema.value?.storageType === "document";
 }
 
 function aplicarCamposAutogeneradosEnPayload(schema: CmsContentSchema, payload: Record<string, unknown>): void {
-  for (const field of schema.fields) {
-    if (!esCampoAutogeneradoGestionado(schema, field)) {
-      continue;
-    }
-    if (field.type === "date") {
-      payload[field.key] = new Date();
-    }
-  }
+ for (const field of schema.fields) {
+ if (!esCampoAutogeneradoGestionado(schema, field)) {
+ continue;
+ }
+ if (field.type === "date") {
+ payload[field.key] = new Date();
+ }
+ }
 }
 </script>
 
 <template>
-  <section class="space-y-4">
-    <article class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-      Contenido muestra formularios y registros. Los esquemas se muestran en la vista <strong>Esquemas</strong>.
-      <p v-if="cargandoSchemas" class="mt-2 text-xs text-slate-500">Cargando formularios...</p>
-      <p v-else-if="errorSchema" class="mt-2 text-xs text-rose-700">{{ errorSchema }}</p>
-    </article>
+ <section class="space-y-4">
+ <article class="rounded-2xl border px-4 py-3 text-sm ">
+ Contenido muestra formularios y registros. Los esquemas se muestran en la vista <strong>Esquemas</strong>.
+ <p v-if="cargandoSchemas" class="mt-2 text-xs ">Cargando formularios...</p>
+ <p v-else-if="errorSchema" class="mt-2 text-xs ">{{ errorSchema }}</p>
+ </article>
 
-    <article class="rounded-2xl border border-slate-200 bg-white p-5">
-      <h3 class="text-xl font-black text-slate-900">
-        {{ selectedSchema ? `Formulario y registros: ${selectedSchema.title}` : "Formulario y registros" }}
-      </h3>
-      <p class="mt-1 text-sm text-slate-600">El formulario se genera desde el esquema y lo completa el usuario final.</p>
+ <article class="rounded-2xl border p-5">
+ <h3 class="text-xl font-black ">
+ {{ selectedSchema ? `Formulario y registros: ${selectedSchema.title}` : "Formulario y registros" }}
+ </h3>
+ <p class="mt-1 text-sm ">El formulario se genera desde el esquema y lo completa el usuario final.</p>
 
-      <p
-        v-if="!puedeEditarContenido"
-        class="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700"
-      >
-        No tienes permisos para crear, editar o eliminar contenido. Roles permitidos: admin, writer, manager.
-      </p>
+ <p
+ v-if="!puedeEditarContenido"
+ class="mt-3 rounded-md border px-3 py-2 text-sm "
+ >
+ No tienes permisos para crear, editar o eliminar contenido. Roles permitidos: admin, writer, manager.
+ </p>
 
-      <p
-        v-if="errorRegistro"
-        class="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700"
-      >
-        {{ errorRegistro }}
-      </p>
-      <p
-        v-if="mensajeRegistro"
-        class="mt-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700"
-      >
-        {{ mensajeRegistro }}
-      </p>
+ <p
+ v-if="errorRegistro"
+ class="mt-3 rounded-md border px-3 py-2 text-sm "
+ >
+ {{ errorRegistro }}
+ </p>
+ <p
+ v-if="mensajeRegistro"
+ class="mt-3 rounded-md border px-3 py-2 text-sm "
+ >
+ {{ mensajeRegistro }}
+ </p>
 
-      <form
-        v-if="selectedSchema && selectedSchema.storageType === 'document'"
-        class="mt-5 space-y-4"
-        @submit.prevent="guardarRegistro"
-      >
-        <div v-for="field in camposVisiblesFormulario(selectedSchema)" :key="field.key" class="space-y-1">
-          <label class="block text-sm font-semibold text-slate-700">{{ field.label }}</label>
-          <p v-if="field.helpText" class="text-xs text-slate-500">{{ field.helpText }}</p>
+ <form
+ v-if="selectedSchema && selectedSchema.storageType === 'document'"
+ class="mt-5 space-y-4"
+ @submit.prevent="guardarRegistro"
+ >
+ <div v-for="field in camposVisiblesFormulario(selectedSchema)" :key="field.key" class="space-y-1">
+ <label class="block text-sm font-semibold ">{{ field.label }}</label>
+ <p v-if="field.helpText" class="text-xs ">{{ field.helpText }}</p>
 
-          <CmsFieldValueInput
-            :field="field"
-            :model-value="valorCampoParaInput(field)"
-            :disabled="!puedeEditarContenido"
-            :is-auto-id="esCampoIdAutonumerico(field)"
-            :document-options="opcionesDocumento(field)"
-            :document-hint="hintDocumentoSeleccionado(field)"
-            :upload-image="subirImagenEditor"
-            @update:model-value="actualizarValorCampo(field, $event)"
-            @update:file="setArchivo(field.key, $event)"
-            @remove-image="quitarImagen(field.key)"
-          />
-        </div>
+ <CmsFieldValueInput
+ :field="field"
+ :model-value="valorCampoParaInput(field)"
+ :disabled="!puedeEditarContenido"
+ :is-auto-id="esCampoIdAutonumerico(field)"
+ :document-options="opcionesDocumento(field)"
+ :document-hint="hintDocumentoSeleccionado(field)"
+ :upload-image="subirImagenEditor"
+ @update:model-value="actualizarValorCampo(field, $event)"
+ @update:file="setArchivo(field.key, $event)"
+ @remove-image="quitarImagen(field.key)"
+ />
+ </div>
 
-        <p
-          v-if="selectedSchema.storageType === 'document' && estaEditandoRegistro"
-          class="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-700"
-        >
-          Editando registro: {{ registroEditandoId }}
-        </p>
+ <p
+ v-if="selectedSchema.storageType === 'document' && estaEditandoRegistro"
+ class="rounded-md border px-3 py-2 text-sm "
+ >
+ Editando registro: {{ registroEditandoId }}
+ </p>
 
-        <div class="flex flex-wrap items-center gap-2">
-          <button
-            type="submit"
-            :disabled="guardandoRegistro || !puedeEditarContenido"
-            class="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-400"
-          >
-            {{
-              guardandoRegistro
-                ? "Guardando..."
-                : estaEditandoRegistro
-                  ? "Guardar cambios"
-                  : "Crear documento"
-            }}
-          </button>
-          <button
-            v-if="selectedSchema.storageType === 'document' && estaEditandoRegistro"
-            type="button"
-            :disabled="guardandoRegistro || !puedeEditarContenido"
-            class="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-            @click="cancelarEdicionRegistro"
-          >
-            Cancelar edición
-          </button>
-        </div>
-      </form>
+ <div class="flex flex-wrap items-center gap-2">
+ <button
+ type="submit"
+ :disabled="guardandoRegistro || !puedeEditarContenido"
+ class="rounded-md px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed "
+ >
+ {{
+ guardandoRegistro
+ ? "Guardando..."
+ : estaEditandoRegistro
+ ? "Guardar cambios"
+ : "Crear documento"
+ }}
+ </button>
+ <button
+ v-if="selectedSchema.storageType === 'document' && estaEditandoRegistro"
+ type="button"
+ :disabled="guardandoRegistro || !puedeEditarContenido"
+ class="rounded-md border px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+ @click="cancelarEdicionRegistro"
+ >
+ Cancelar edición
+ </button>
+ </div>
+ </form>
 
-      <div class="mt-6 border-t border-slate-200 pt-5">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <h4 class="text-sm font-black uppercase tracking-wide text-slate-600">Registros guardados</h4>
-          <button
-            v-if="selectedSchema?.storageType === 'dictionary'"
-            type="button"
-            :disabled="!puedeEditarContenido || guardandoRegistro"
-            class="rounded-md bg-slate-900 px-3 py-1 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-400"
-            @click="abrirModalFormularioDiccionario"
-          >
-            + Nuevo
-          </button>
-        </div>
+ <div class="mt-6 border-t pt-5">
+ <div class="flex flex-wrap items-center justify-between gap-3">
+ <h4 class="text-sm font-black uppercase tracking-wide ">Registros guardados</h4>
+ <button
+ v-if="selectedSchema?.storageType === 'dictionary'"
+ type="button"
+ :disabled="!puedeEditarContenido || guardandoRegistro"
+ class="rounded-md px-3 py-1 text-sm font-semibold disabled:cursor-not-allowed "
+ @click="abrirModalFormularioDiccionario"
+ >
+ + Nuevo
+ </button>
+ </div>
 
-        <p v-if="cargandoRegistros" class="mt-3 text-sm text-slate-500">Cargando registros...</p>
-        <p v-else-if="!registros.length" class="mt-3 text-sm text-slate-500">No hay registros todavía.</p>
+ <p v-if="cargandoRegistros" class="mt-3 text-sm ">Cargando registros...</p>
+ <p v-else-if="!registros.length" class="mt-3 text-sm ">No hay registros todavía.</p>
 
-        <ul v-else class="mt-3 space-y-2">
-          <li
-            v-for="record in registros"
-            :key="record.id"
-            :class="[
-              'flex items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2',
-              selectedSchema?.storageType === 'document' && registroEditandoId === record.id
-                ? 'border-sky-300 bg-sky-50'
-                : ''
-            ]"
-          >
-            <div>
-              <p class="text-sm font-semibold text-slate-900">
-                {{ selectedSchema ? valorPreviewRegistro(record, selectedSchema) : record.id }}
-              </p>
-              <p class="text-xs text-slate-500">ID: {{ record.id }}</p>
-            </div>
+ <ul v-else class="mt-3 space-y-2">
+ <li
+ v-for="record in registros"
+ :key="record.id"
+ :class="[
+ 'flex items-center justify-between gap-3 rounded-lg border px-3 py-2',
+ selectedSchema?.storageType === 'document' && registroEditandoId === record.id
+ ? ' '
+ : ''
+ ]"
+ >
+ <div>
+ <p class="text-sm font-semibold ">
+ {{ selectedSchema ? valorPreviewRegistro(record, selectedSchema) : record.id }}
+ </p>
+ <p class="text-xs ">ID: {{ record.id }}</p>
+ </div>
 
-            <div v-if="selectedSchema?.storageType === 'document'" class="flex items-center gap-2">
-              <button
-                type="button"
-                :disabled="!puedeEditarContenido || guardandoRegistro"
-                class="rounded-md border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                @click="editarRegistro(record)"
-              >
-                {{ registroEditandoId === record.id ? "Editando" : "Editar" }}
-              </button>
-              <button
-                type="button"
-                :disabled="!puedeEditarContenido"
-                class="rounded-md border border-rose-300 px-2 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
-                @click="borrarRegistro(record.id)"
-              >
-                Eliminar
-              </button>
-            </div>
-          </li>
-        </ul>
-      </div>
+ <div v-if="selectedSchema?.storageType === 'document'" class="flex items-center gap-2">
+ <button
+ type="button"
+ :disabled="!puedeEditarContenido || guardandoRegistro"
+ class="rounded-md border px-2 py-1 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+ @click="editarRegistro(record)"
+ >
+ {{ registroEditandoId === record.id ? "Editando" : "Editar" }}
+ </button>
+ <button
+ type="button"
+ :disabled="!puedeEditarContenido"
+ class="rounded-md border px-2 py-1 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+ @click="borrarRegistro(record.id)"
+ >
+ Eliminar
+ </button>
+ </div>
+ </li>
+ </ul>
+ </div>
 
-      <div
-        v-if="selectedSchema?.storageType === 'dictionary' && modalFormularioDiccionarioAbierto"
-        class="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 p-4"
-        @click.self="cerrarModalFormularioDiccionario"
-      >
-        <article class="w-full max-w-2xl rounded-xl border border-slate-200 bg-white p-5 shadow-2xl">
-          <header class="flex items-center justify-between gap-3">
-            <h4 class="text-base font-black text-slate-900">Editar diccionario</h4>
-            <button
-              type="button"
-              class="rounded-md border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-              @click="cerrarModalFormularioDiccionario"
-            >
-              Cerrar
-            </button>
-          </header>
+ <div
+ v-if="selectedSchema?.storageType === 'dictionary' && modalFormularioDiccionarioAbierto"
+ class="fixed inset-0 z-40 flex items-center justify-center p-4"
+ @click.self="cerrarModalFormularioDiccionario"
+ >
+ <article class="w-full max-w-2xl rounded-xl border p-5 shadow-2xl">
+ <header class="flex items-center justify-between gap-3">
+ <h4 class="text-base font-black ">Editar diccionario</h4>
+ <button
+ type="button"
+ class="rounded-md border px-2 py-1 text-xs font-semibold "
+ @click="cerrarModalFormularioDiccionario"
+ >
+ Cerrar
+ </button>
+ </header>
 
-          <form class="mt-4 space-y-4" @submit.prevent="guardarRegistro">
-            <div v-for="field in camposVisiblesFormulario(selectedSchema)" :key="field.key" class="space-y-1">
-              <label class="block text-sm font-semibold text-slate-700">{{ field.label }}</label>
-              <p v-if="field.helpText" class="text-xs text-slate-500">{{ field.helpText }}</p>
+ <form class="mt-4 space-y-4" @submit.prevent="guardarRegistro">
+ <div v-for="field in camposVisiblesFormulario(selectedSchema)" :key="field.key" class="space-y-1">
+ <label class="block text-sm font-semibold ">{{ field.label }}</label>
+ <p v-if="field.helpText" class="text-xs ">{{ field.helpText }}</p>
 
-              <CmsFieldValueInput
-                :field="field"
-                :model-value="valorCampoParaInput(field)"
-                :disabled="!puedeEditarContenido"
-                :is-auto-id="esCampoIdAutonumerico(field)"
-                :document-options="opcionesDocumento(field)"
-                :document-hint="hintDocumentoSeleccionado(field)"
-                :upload-image="subirImagenEditor"
-                @update:model-value="actualizarValorCampo(field, $event)"
-                @update:file="setArchivo(field.key, $event)"
-                @remove-image="quitarImagen(field.key)"
-              />
-            </div>
+ <CmsFieldValueInput
+ :field="field"
+ :model-value="valorCampoParaInput(field)"
+ :disabled="!puedeEditarContenido"
+ :is-auto-id="esCampoIdAutonumerico(field)"
+ :document-options="opcionesDocumento(field)"
+ :document-hint="hintDocumentoSeleccionado(field)"
+ :upload-image="subirImagenEditor"
+ @update:model-value="actualizarValorCampo(field, $event)"
+ @update:file="setArchivo(field.key, $event)"
+ @remove-image="quitarImagen(field.key)"
+ />
+ </div>
 
-            <p
-              v-if="errorRegistro"
-              class="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700"
-            >
-              {{ errorRegistro }}
-            </p>
+ <p
+ v-if="errorRegistro"
+ class="rounded-md border px-3 py-2 text-sm "
+ >
+ {{ errorRegistro }}
+ </p>
 
-            <div class="flex flex-wrap items-center gap-2">
-              <button
-                type="submit"
-                :disabled="guardandoRegistro || !puedeEditarContenido"
-                class="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-400"
-              >
-                {{ guardandoRegistro ? "Guardando..." : "Guardar diccionario" }}
-              </button>
-              <button
-                type="button"
-                class="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                @click="cerrarModalFormularioDiccionario"
-              >
-                Cancelar
-              </button>
-            </div>
-          </form>
-        </article>
-      </div>
-    </article>
-  </section>
+ <div class="flex flex-wrap items-center gap-2">
+ <button
+ type="submit"
+ :disabled="guardandoRegistro || !puedeEditarContenido"
+ class="rounded-md px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed "
+ >
+ {{ guardandoRegistro ? "Guardando..." : "Guardar diccionario" }}
+ </button>
+ <button
+ type="button"
+ class="rounded-md border px-4 py-2 text-sm font-semibold "
+ @click="cerrarModalFormularioDiccionario"
+ >
+ Cancelar
+ </button>
+ </div>
+ </form>
+ </article>
+ </div>
+ </article>
+ </section>
 </template>

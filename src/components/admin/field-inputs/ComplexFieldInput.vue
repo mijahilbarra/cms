@@ -5,26 +5,26 @@ import type { CmsFieldSchema } from "../../../types/contentSchema";
 defineOptions({ name: "ComplexFieldInput" });
 
 withDefaults(
-  defineProps<{
-    field: CmsFieldSchema;
-    modelValue: unknown;
-    disabled?: boolean;
-  }>(),
-  {
-    disabled: false
-  }
+ defineProps<{
+ field: CmsFieldSchema;
+ modelValue: unknown;
+ disabled?: boolean;
+ }>(),
+ {
+ disabled: false
+ }
 );
 
 const emit = defineEmits<{
-  (event: "update:modelValue", value: unknown): void;
+ (event: "update:modelValue", value: unknown): void;
 }>();
 </script>
 
 <template>
-  <CmsNestedValueEditor
-    :schema="field"
-    :model-value="modelValue"
-    :disabled="disabled"
-    @update:model-value="emit('update:modelValue', $event)"
-  />
+ <CmsNestedValueEditor
+ :schema="field"
+ :model-value="modelValue"
+ :disabled="disabled"
+ @update:model-value="emit('update:modelValue', $event)"
+ />
 </template>
