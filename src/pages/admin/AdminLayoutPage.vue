@@ -256,9 +256,6 @@ const sidebarStyle = computed<CSSProperties>(() => ({
  height: "100dvh",
  maxHeight: "100dvh",
  overflow: "hidden",
- display: "flex",
- minHeight: "0",
- flexDirection: "column",
  padding: "0",
  backgroundColor: cmsSurface,
  color: cmsText,
@@ -367,6 +364,7 @@ function navMetaStyle(activo: boolean): CSSProperties {
  <aside
  v-show="panelAbierto"
  class="fixed inset-y-0 left-0 z-40 w-80 border-r shadow-xl"
+ style="display: flex; min-height: 0; flex-direction: column;"
  :style="sidebarStyle"
  >
  <div class="mb-3 p-3 lg:mb-0" :style="{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }">

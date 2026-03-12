@@ -551,9 +551,6 @@ const $u = {
       height: "100dvh",
       maxHeight: "100dvh",
       overflow: "hidden",
-      display: "flex",
-      minHeight: "0",
-      flexDirection: "column",
       padding: "0",
       backgroundColor: ir,
       color: vt,
@@ -644,7 +641,7 @@ const $u = {
       }, null, 4)) : re("", !0),
       Mn(v("aside", {
         class: "fixed inset-y-0 left-0 z-40 w-80 border-r shadow-xl",
-        style: Se(ee.value)
+        style: Se([{ display: "flex", "min-height": "0", "flex-direction": "column" }, ee.value])
       }, [
         v("div", $u, [
           v("h2", {
