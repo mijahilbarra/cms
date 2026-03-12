@@ -1,9 +1,3 @@
-import "./styles/tailwind.css";
-import "./styles/cms-static.css";
-import { ensureCmsStyles } from "./styles/ensureCmsStyles";
-
-ensureCmsStyles();
-
 export { registerPifWarriorsCms, createCmsRoutes } from "./router";
 export type { RegisterPifWarriorsCmsOptions } from "./router";
 export type { CmsFirebaseServices } from "./firebase/context";

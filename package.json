@@ -10,8 +10,7 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/pif-warriors-cms.js"
-    },
-    "./styles.css": "./dist/pif-warriors-cms.css"
+    }
   },
   "files": [
     "dist"
