@@ -48,6 +48,7 @@ const mensajeRegistro = ref("");
 const errorRegistro = ref("");
 const documentFieldState = ref<Record<string, DocumentRelationState>>({});
 const registroEditandoId = ref("");
+const modalFormularioDiccionarioAbierto = ref(false);
 
 const puedeEditarContenido = computed(() => {
   return rolActual.value === "admin" || rolActual.value === "writer" || rolActual.value === "manager";
@@ -74,7 +75,12 @@ watch(
       registros.value = [];
       documentFieldState.value = {};
       registroEditandoId.value = "";
+      modalFormularioDiccionarioAbierto.value = false;
       return;
+    }
+
+    if (schema.storageType !== "dictionary") {
+      modalFormularioDiccionarioAbierto.value = false;
     }
 
     inicializarFormularioRegistro(schema);
@@ -344,6 +350,27 @@ function editarRegistro(registro: DynamicDocumentRecord): void {
   registroEditandoId.value = registro.id;
 }
 
+function abrirModalFormularioDiccionario(): void {
+  const schema = selectedSchema.value;
+  if (!schema || schema.storageType !== "dictionary") {
+    return;
+  }
+
+  if (registros.value[0]) {
+    hidratarFormularioDesdeRegistro(schema, registros.value[0]);
+  } else {
+    inicializarFormularioRegistro(schema);
+  }
+
+  errorRegistro.value = "";
+  modalFormularioDiccionarioAbierto.value = true;
+}
+
+function cerrarModalFormularioDiccionario(): void {
+  modalFormularioDiccionarioAbierto.value = false;
+  errorRegistro.value = "";
+}
+
 function cancelarEdicionRegistro(): void {
   const schema = selectedSchema.value;
   if (!schema || schema.storageType !== "document") {
@@ -395,6 +422,7 @@ async function guardarRegistro(): Promise<void> {
     if (schema.storageType === "dictionary") {
       await guardarRegistroDiccionario(schema, payload);
       mensajeRegistro.value = "Registro de diccionario actualizado.";
+      modalFormularioDiccionarioAbierto.value = false;
     } else {
       if (registroEditandoId.value) {
         await actualizarRegistroDocumento(schema, registroEditandoId.value, payload);
@@ -1009,8 +1037,21 @@ function aplicarCamposAutogeneradosEnPayload(schema: CmsContentSchema, payload: 
         No tienes permisos para crear, editar o eliminar contenido. Roles permitidos: admin, writer, manager.
       </p>
 
+      <p
+        v-if="errorRegistro"
+        class="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700"
+      >
+        {{ errorRegistro }}
+      </p>
+      <p
+        v-if="mensajeRegistro"
+        class="mt-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700"
+      >
+        {{ mensajeRegistro }}
+      </p>
+
       <form
-        v-if="selectedSchema"
+        v-if="selectedSchema && selectedSchema.storageType === 'document'"
         class="mt-5 space-y-4"
         @submit.prevent="guardarRegistro"
       >
@@ -1038,18 +1079,6 @@ function aplicarCamposAutogeneradosEnPayload(schema: CmsContentSchema, payload: 
         >
           Editando registro: {{ registroEditandoId }}
         </p>
-        <p
-          v-if="errorRegistro"
-          class="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700"
-        >
-          {{ errorRegistro }}
-        </p>
-        <p
-          v-if="mensajeRegistro"
-          class="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700"
-        >
-          {{ mensajeRegistro }}
-        </p>
 
         <div class="flex flex-wrap items-center gap-2">
           <button
@@ -1060,11 +1089,9 @@ function aplicarCamposAutogeneradosEnPayload(schema: CmsContentSchema, payload: 
             {{
               guardandoRegistro
                 ? "Guardando..."
-                : selectedSchema.storageType === "dictionary"
-                  ? "Guardar diccionario"
-                  : estaEditandoRegistro
-                    ? "Guardar cambios"
-                    : "Crear documento"
+                : estaEditandoRegistro
+                  ? "Guardar cambios"
+                  : "Crear documento"
             }}
           </button>
           <button
@@ -1080,7 +1107,18 @@ function aplicarCamposAutogeneradosEnPayload(schema: CmsContentSchema, payload: 
       </form>
 
       <div class="mt-6 border-t border-slate-200 pt-5">
-        <h4 class="text-sm font-black uppercase tracking-wide text-slate-600">Registros guardados</h4>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <h4 class="text-sm font-black uppercase tracking-wide text-slate-600">Registros guardados</h4>
+          <button
+            v-if="selectedSchema?.storageType === 'dictionary'"
+            type="button"
+            :disabled="!puedeEditarContenido || guardandoRegistro"
+            class="rounded-md bg-slate-900 px-3 py-1 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+            @click="abrirModalFormularioDiccionario"
+          >
+            + Nuevo
+          </button>
+        </div>
 
         <p v-if="cargandoRegistros" class="mt-3 text-sm text-slate-500">Cargando registros...</p>
         <p v-else-if="!registros.length" class="mt-3 text-sm text-slate-500">No hay registros todavía.</p>
@@ -1123,6 +1161,69 @@ function aplicarCamposAutogeneradosEnPayload(schema: CmsContentSchema, payload: 
             </div>
           </li>
         </ul>
+      </div>
+
+      <div
+        v-if="selectedSchema?.storageType === 'dictionary' && modalFormularioDiccionarioAbierto"
+        class="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 p-4"
+        @click.self="cerrarModalFormularioDiccionario"
+      >
+        <article class="w-full max-w-2xl rounded-xl border border-slate-200 bg-white p-5 shadow-2xl">
+          <header class="flex items-center justify-between gap-3">
+            <h4 class="text-base font-black text-slate-900">Editar diccionario</h4>
+            <button
+              type="button"
+              class="rounded-md border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              @click="cerrarModalFormularioDiccionario"
+            >
+              Cerrar
+            </button>
+          </header>
+
+          <form class="mt-4 space-y-4" @submit.prevent="guardarRegistro">
+            <div v-for="field in camposVisiblesFormulario(selectedSchema)" :key="field.key" class="space-y-1">
+              <label class="block text-sm font-semibold text-slate-700">{{ field.label }}</label>
+              <p v-if="field.helpText" class="text-xs text-slate-500">{{ field.helpText }}</p>
+
+              <CmsFieldValueInput
+                :field="field"
+                :model-value="valorCampoParaInput(field)"
+                :disabled="!puedeEditarContenido"
+                :is-auto-id="esCampoIdAutonumerico(field)"
+                :document-options="opcionesDocumento(field)"
+                :document-hint="hintDocumentoSeleccionado(field)"
+                :upload-image="subirImagenEditor"
+                @update:model-value="actualizarValorCampo(field, $event)"
+                @update:file="setArchivo(field.key, $event)"
+                @remove-image="quitarImagen(field.key)"
+              />
+            </div>
+
+            <p
+              v-if="errorRegistro"
+              class="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700"
+            >
+              {{ errorRegistro }}
+            </p>
+
+            <div class="flex flex-wrap items-center gap-2">
+              <button
+                type="submit"
+                :disabled="guardandoRegistro || !puedeEditarContenido"
+                class="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+              >
+                {{ guardandoRegistro ? "Guardando..." : "Guardar diccionario" }}
+              </button>
+              <button
+                type="button"
+                class="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                @click="cerrarModalFormularioDiccionario"
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        </article>
       </div>
     </article>
   </section>
